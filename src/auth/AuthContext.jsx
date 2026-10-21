@@ -136,7 +136,7 @@ export function AuthProvider({ children }) {
   const value = useMemo(() => ({ session, sessionNotice, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess }), [
     session, sessionNotice, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess,
   ]);
-  return <AuthContext.Provider value={value}>{restoring ? <main className="gate-state" aria-label="Loading Reclaim" aria-busy="true"><LoadingState label="" /></main> : restoreError ? <main className="gate-state"><ErrorNotice error={restoreError} title="Your session could not be checked" /><button className="button button-secondary" type="button" onClick={() => setRevision(value => value + 1)}>Try again</button></main> : <SessionBoundary key={session ? session.role + ":" + (session.identity.user_id || session.identity.staff_id) : "guest"}>{children}</SessionBoundary>}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{restoring ? <main className="app-loading" aria-label="Loading Reclaim" aria-busy="true"><LoadingState label={<span className="sr-only">Loading Reclaim...</span>} /></main> : restoreError ? <main className="gate-state"><ErrorNotice error={restoreError} title="Your session could not be checked" /><button className="button button-secondary" type="button" onClick={() => setRevision(value => value + 1)}>Try again</button></main> : <SessionBoundary key={session ? session.role + ":" + (session.identity.user_id || session.identity.staff_id) : "guest"}>{children}</SessionBoundary>}</AuthContext.Provider>;
 }
 
 export function useAuth() {
