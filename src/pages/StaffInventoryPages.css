@@ -9,10 +9,6 @@
 .inventory-lower-panel { margin-top: 24px; }
 .selected-claim { outline: 2px solid var(--focus); outline-offset: -2px; background: var(--teal-soft); }
 .selected-claim-label { display: block; margin-top: 4px; color: var(--teal-dark); font-size: 13px; font-weight: 600; }
-.ownership-evidence { min-width: 0; max-width: 32rem; }
-.ownership-evidence summary { min-height: 44px; padding-block: 10px; color: var(--teal-dark); cursor: pointer; }
-.ownership-evidence summary:hover { text-decoration: underline; }
-.ownership-evidence p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .claim-decision { display: grid; gap: 8px; }
 .muted-copy { color: var(--muted); font-size: .9rem; }
 .report-filter-panel { margin-bottom: 15px; }
@@ -21,3 +17,10 @@
 @media(max-width:1050px) { .item-detail-grid { grid-template-columns: 1fr; } .report-filter-form { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:700px) { .inventory-filter-form, .report-filter-form, .staff-report-grid { grid-template-columns: 1fr; } }
 @media(max-width:700px) { .inventory-filter-form .button { margin-top: 0; } }
+
+.staff-claims-panel td { vertical-align: top; }
+.staff-evidence-control .text-button { max-width: 100%; text-align: left; white-space: normal; }
+.staff-claim-evidence-dialog { width: min(calc(100% - 2rem), 64rem); overflow-wrap: anywhere; }
+.staff-claim-evidence-dialog .staff-claim-written-evidence { white-space: pre-wrap; overflow-wrap: anywhere; }
+.staff-claim-evidence-dialog .item-photograph { width: auto; height: auto; max-width: 100%; max-height: min(32rem, 55dvh); margin-inline: auto; object-fit: contain; }
+@media(max-width:600px) { .staff-claim-evidence-dialog { width: calc(100% - 1rem); } }

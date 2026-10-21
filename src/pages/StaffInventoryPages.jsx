@@ -3,7 +3,6 @@ import { useConfirm } from "../components/Confirmation";
 import { ImageManager } from "../components/Images";
 import { FormDialog } from "../components/FormDialog";
 import OwnershipEvidence from "../components/OwnershipEvidence";
-import { ClaimProofImage } from "../components/ClaimProofImage";
 import { useEffect, useRef, useState } from "react";
 import { StatusTabs } from "../components/StatusTabs";
 import { statusPages } from "../api/statusPages";
@@ -175,15 +174,15 @@ export function ItemDetailPage() {
       </div>
     </div>
     <ImageManager path={"items/" + itemId + "/images"} publication readOnly={item.is_returned || !item.current_assignment} />
-    <Panel className="inventory-lower-panel" title="Ownership claims" description="Claim evidence and claimant contacts are visible only to authorized staff.">
+    <Panel className="inventory-lower-panel staff-claims-panel" title="Ownership claims" description="Claim evidence and claimant contacts are visible only to authorized staff.">
       <ErrorNotice error={claimsResource.error} retry={false} />
       {claimsResource.error && <button className="button button-secondary" type="button" onClick={claimsResource.reload}>Retry claims</button>}
       {claimsResource.loading && !claimsResource.payload ? <LoadingState label="Loading item claims…" /> : !claimsResource.error && <>
       {claimsResource.payload && <p role="status">{claimsResource.page.total} claims in total</p>}
       {selectedClaimant && !activeClaims.some(claim => String(claim.claimant_id) === selectedClaimant) && <p className="muted-copy">The selected claim is not on this page.</p>}
       <DataTable caption="Claims for this item" rows={activeClaims} rowProps={claim => String(claim.claimant_id) === selectedClaimant ? { id: "claim-" + itemId + "-" + selectedClaimant, tabIndex: -1, className: "selected-claim" } : {}} rowKey={(claim) => claim.claimant_id} emptyTitle="No claims on this item" emptyText="No ownership claims have been submitted for this item." columns={[
-        { key: "claimant", label: "Claimant", render: (claim) => <><strong>{claim.claimant?.full_name}</strong>{String(claim.claimant_id) === selectedClaimant && <span className="selected-claim-label">Selected claim</span>}<small className="table-subline">{claim.claimant?.contact_details}</small></> },
-        { key: "evidence_text", label: "Evidence", render: (claim) => <div className="claim-evidence"><OwnershipEvidence text={claim.evidence_text} /><ClaimProofImage hasImage={claim.has_proof_image} path={"items/" + itemId + "/claims/" + claim.claimant_id + "/proof-image"} claimantName={claim.claimant?.full_name} /></div> },
+        { key: "claimant", label: "Claimant", render: (claim) => <div><strong>{claim.claimant?.full_name}</strong>{String(claim.claimant_id) === selectedClaimant && <span className="selected-claim-label">Selected claim</span>}<small className="table-subline">{claim.claimant?.contact_details}</small></div> },
+        { key: "evidence_text", label: "Evidence", render: (claim) => <OwnershipEvidence claim={claim} item={item} /> },
         { key: "submitted_at", label: "Submitted", render: (claim) => formatDate(claim.submitted_at, { time: true }) },
         { key: "outcome", label: "Outcome", render: (claim) => <StatusBadge value={claim.outcome} /> },
         { key: "reviewer", label: "Reviewed by", render: (claim) => claim.reviewer?.full_name ? claim.reviewer.full_name + " · " + formatDate(claim.reviewed_at) : "—" },
@@ -218,13 +217,13 @@ export function StaffClaimsPage() {
   const resource = useApiResource("staff-pending-claims-" + pageNumber, () => api("reports/pending-claims", { query: { per_page: 20, page: pageNumber } }));
   return <>
     <PageHeading eyebrow="CLAIM REVIEW" title="Pending claims" description="Review evidence, then open the item record to reject or complete a return." />
-    <Panel title="Claims awaiting review" description="This report includes the evidence text and related item and claimant details for staff.">
+    <Panel className="staff-claims-panel" title="Claims awaiting review" description="This report includes the evidence text and related item and claimant details for staff.">
       {resource.loading ? <LoadingState label="Loading pending claims…" /> : resource.error ? <ErrorNotice error={resource.error} /> : <DataTable caption="Pending claims" rows={resource.rows} rowKey={(row) => row.item_id + "-" + row.claimant_id} emptyTitle="No claims awaiting review" emptyText="There are no claims awaiting review." columns={[
-        { key: "claimant", label: "Claimant", render: (row) => <><strong>{row.claimant?.full_name}</strong><small className="table-subline">{row.claimant?.contact_details}</small></> },
-        { key: "item", label: "Item", render: (row) => <><strong>{row.item?.item_description}</strong><small className="table-subline">{row.item?.category?.category_name} · #{row.item_id}</small></> },
-        { key: "evidence_text", label: "Evidence", render: (row) => <div className="claim-evidence"><OwnershipEvidence text={row.evidence_text} /><ClaimProofImage hasImage={row.has_proof_image} path={"items/" + row.item_id + "/claims/" + row.claimant_id + "/proof-image"} claimantName={row.claimant?.full_name} /></div> },
+        { key: "claimant", label: "Claimant", render: (row) => <div><strong>{row.claimant?.full_name}</strong><small className="table-subline">{row.claimant?.contact_details}</small></div> },
+        { key: "item", label: "Item", render: (row) => <div><strong>{row.item?.item_description}</strong><small className="table-subline">{row.item?.category?.category_name} · #{row.item_id}</small></div> },
+        { key: "evidence_text", label: "Evidence", render: (row) => <OwnershipEvidence claim={row} /> },
         { key: "submitted_at", label: "Submitted", render: (row) => formatDate(row.submitted_at, { time: true }) },
-        { key: "review", label: "Review", render: (row) => <Link to={"/staff/items/" + row.item_id + "?claimant=" + row.claimant_id} state={{ reviewFrom: navigation.pathname + navigation.search }}>Review item</Link> },
+        { key: "review", label: "Review", render: (row) => <Link className="button button-secondary button-small" to={"/staff/items/" + row.item_id + "?claimant=" + row.claimant_id} state={{ reviewFrom: navigation.pathname + navigation.search }}>Review item</Link> },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
     </Panel>

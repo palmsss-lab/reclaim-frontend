@@ -19,6 +19,7 @@ export async function verifyClaimProofs({ browser, http, password, fixture, uiOr
     await http("staff/items/" + item.item_id + "/public-listing", { token: staffToken, method: "PUT", expected: 201, body: { public_description: description } });
     return item.item_id;
   }
+  const writtenEvidence = "Synthetic identifying evidence.\n" + "Fictional ownership details. ".repeat(100) + "\n" + "x".repeat(180) + "\n<em>Literal ownership text</em>";
   const itemId = await newItem("Proof image browser test");
   const textItem = await newItem("Text only browser test");
   const photo = { name: "proof.png", mimeType: "image/png", buffer: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "base64") };
@@ -99,7 +100,7 @@ export async function verifyClaimProofs({ browser, http, password, fixture, uiOr
     const evidence = dialog.getByLabel("Evidence of ownership", { exact: true });
     const input = dialog.locator('input[type="file"]');
     const submit = dialog.getByRole("button", { name: "Submit ownership claim", exact: true });
-    await evidence.fill("Synthetic identifying evidence");
+    await evidence.fill(writtenEvidence);
     const pattern = "**/api/my/items/" + itemId + "/claims";
     let requests = 0;
     page.on("request", request => { if (new URL(request.url()).pathname === "/api/my/items/" + itemId + "/claims" && request.method() === "POST") requests++; });
@@ -136,7 +137,7 @@ export async function verifyClaimProofs({ browser, http, password, fixture, uiOr
     await submit.click();
     assert.equal((await received).status(), 422);
     await dialog.getByRole("alert").waitFor();
-    assert.equal(await evidence.inputValue(), "Synthetic identifying evidence");
+    assert.equal(await evidence.inputValue(), writtenEvidence);
     assert.equal(await input.evaluate(el => el.files[0].name), "proof.png");
     assert.equal(await input.getAttribute("aria-invalid"), "true");
     assert.equal(await page.locator(".success-toast").count(), 0);
@@ -147,7 +148,7 @@ export async function verifyClaimProofs({ browser, http, password, fixture, uiOr
     await page.route(pattern, fail);
     await submit.click();
     await dialog.getByRole("alert").getByText(/connection|confirm|saved|complete/i).first().waitFor();
-    assert.equal(await evidence.inputValue(), "Synthetic identifying evidence");
+    assert.equal(await evidence.inputValue(), writtenEvidence);
     assert.equal(await input.evaluate(el => el.files[0].name), "proof.png");
     assert.equal(await page.locator(".success-toast").count(), 0);
     await page.unroute(pattern, fail);
@@ -221,27 +222,100 @@ export async function verifyClaimProofs({ browser, http, password, fixture, uiOr
       await login(staff, "admin@example.test", "/admin/accounts");
       const ownClaim = (await http("items/" + itemId + "/claims", { token: staffToken })).data[0];
       await staff.goto(uiOrigin + "/staff/claims", { waitUntil: "domcontentloaded", timeout: 60000 });
-      const queueProof = staff.locator(".claim-proof");
-      await queueProof.locator("summary").click();
-      await queueProof.getByAltText("Private ownership proof from Fictional Proof Owner").waitFor();
-      await staff.goto(uiOrigin + "/staff/items/" + itemId + "?claimant=" + ownClaim.claimant_id, { waitUntil: "domcontentloaded", timeout: 60000 });
-      const selected = staff.locator(".selected-claim"), detailProof = selected.locator(".claim-proof");
-      await detailProof.locator("summary").focus();
-      await staff.keyboard.press("Enter");
-      await detailProof.getByAltText("Private ownership proof from Fictional Proof Owner").waitFor();
+      const proofPath = "**/api/items/" + itemId + "/claims/" + ownClaim.claimant_id + "/proof-image";
+      const requests = [];
+      staff.on("request", request => { if (request.url().endsWith("/proof-image")) requests.push(request.url()); });
+      async function checkStaffEvidence(row, description, evidenceText, hasImage, label) {
+        const opener = row.getByRole("button", { name: "View claim evidence", exact: true });
+        const viewer = staff.getByRole("dialog", { name: "Claim evidence", exact: true });
+        const height = (await row.boundingBox()).height;
+        const before = requests.length;
+        assert.equal(await row.locator("img, details").count(), 0);
+        assert.equal(await viewer.isVisible(), false);
+        assert.equal(await row.locator(".staff-claim-written-evidence").count(), 0);
+        await opener.focus(); await staff.keyboard.press("Enter");
+        const close = viewer.getByRole("button", { name: "Close claim evidence", exact: true });
+        await viewer.waitFor();
+        assert.equal(await close.evaluate(node => node === document.activeElement), true);
+        await staff.keyboard.press("Tab");
+        assert.equal(await close.evaluate(node => node === document.activeElement), true);
+        await staff.keyboard.press("Shift+Tab");
+        assert.equal(await close.evaluate(node => node === document.activeElement), true);
+        await viewer.getByText("Fictional Proof Owner", { exact: true }).waitFor();
+        await viewer.getByText(description, { exact: true }).waitFor();
+        assert.equal((await viewer.locator(".staff-claim-written-evidence").textContent()).replaceAll("\r\n", "\n"), evidenceText);
+        assert.equal(await viewer.locator("em").count(), 0, "evidence remains literal text");
+        assert.ok(Math.abs((await row.boundingBox()).height - height) <= 1, "evidence never expands a row/card");
+        const bounds = await viewer.boundingBox();
+        const viewport = staff.viewportSize();
+        assert.ok(bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= viewport.width + 1 && bounds.y + bounds.height <= viewport.height + 1);
+        assert.equal(await viewer.evaluate(el => el.scrollWidth <= el.clientWidth + 1), true);
+        let objectUrl;
+        if (hasImage) {
+          const image = viewer.getByAltText("Private ownership proof from Fictional Proof Owner");
+          await image.waitFor();
+          await image.scrollIntoViewIfNeeded();
+          const picture = await image.boundingBox();
+          const natural = await image.evaluate(el => ({ width: el.naturalWidth, height: el.naturalHeight }));
+          assert.ok(Math.abs(picture.width / picture.height - natural.width / natural.height) < .01);
+          assert.ok(picture.x >= bounds.x && picture.y >= bounds.y && picture.x + picture.width <= bounds.x + bounds.width + 1 && picture.y + picture.height <= bounds.y + bounds.height + 1);
+          objectUrl = await image.getAttribute("src");
+          assert.equal(requests.length, before + 1);
+          assert.ok(requests.at(-1).endsWith("/api/items/" + itemId + "/claims/" + ownClaim.claimant_id + "/proof-image"), "proof stays linked to the exact claim");
+        } else {
+          assert.equal(await viewer.locator("img").count(), 0);
+          assert.equal(requests.length, before, "text-only claim never fetches a proof");
+        }
+        await overflow(staff, label);
+        await staff.screenshot({ path: join(runtime, label + ".png"), mask: [viewer.locator(".staff-claim-written-evidence, dd")] });
+        await staff.keyboard.press("Escape"); await viewer.waitFor({ state: "hidden" });
+        await staff.waitForFunction(() => document.activeElement?.textContent === "View claim evidence");
+        if (objectUrl) assert.equal(await staff.evaluate(async url => { try { await fetch(url); return false; } catch { return true; } }, objectUrl), true);
+        await opener.click(); await close.click(); await viewer.waitFor({ state: "hidden" });
+        await staff.waitForFunction(() => document.activeElement?.textContent === "View claim evidence");
+        await opener.click(); await staff.mouse.click(2, 2); await viewer.waitFor({ state: "hidden" });
+        await staff.waitForFunction(() => document.activeElement?.textContent === "View claim evidence");
+        assert.ok(Math.abs((await row.boundingBox()).height - height) <= 1);
+      }
+      for (const width of [1440, 390]) {
+        await staff.setViewportSize({ width, height: 900 });
+        const photoRow = staff.locator(".staff-claims-panel tbody tr").filter({ hasText: "Proof image browser test" });
+        const textRow = staff.locator(".staff-claims-panel tbody tr").filter({ hasText: "Text only browser test" });
+        assert.equal(await staff.locator(".staff-claims-panel img").count(), 0, "staff proof starts unmounted");
+        for (const row of [photoRow, textRow]) {
+          await row.getByRole("button", { name: "View claim evidence", exact: true }).waitFor();
+          assert.equal(await row.getByRole("button", { name: "View claim evidence", exact: true }).count(), 1);
+          if (width === 1440) assert.ok((await row.boundingBox()).height < 220);
+          else {
+            assert.equal(await row.evaluate(el => getComputedStyle(el).display), "block");
+            for (const cell of await row.locator("td").all()) assert.ok(await cell.evaluate(el => el.children.length <= 2), "mobile values share one aligned container; dates may be plain text");
+          }
+        }
+        await checkStaffEvidence(photoRow, "Proof image browser test", writtenEvidence, true, "staff-claim-queue-modal-" + width);
+        await checkStaffEvidence(textRow, "Text only browser test", "Text-only identifying evidence", false, "staff-text-claim-modal-" + width);
+        await staff.screenshot({ path: join(runtime, "staff-claims-compact-" + width + ".png"), mask: [staff.locator(".table-subline")] });
+      }
+      const photoRow = staff.locator(".staff-claims-panel tbody tr").filter({ hasText: "Proof image browser test" });
+      await staff.route(proofPath, route => route.abort("failed"));
+      await photoRow.getByRole("button", { name: "View claim evidence", exact: true }).click();
+      const failedViewer = staff.getByRole("dialog", { name: "Claim evidence", exact: true });
+      await failedViewer.getByText("Image unavailable", { exact: true }).waitFor();
+      assert.equal((await failedViewer.locator(".staff-claim-written-evidence").textContent()).replaceAll("\r\n", "\n"), writtenEvidence, "failed photo keeps written evidence available");
+      await staff.keyboard.press("Escape"); await failedViewer.waitFor({ state: "hidden" });
+      await staff.unroute(proofPath);
+      await photoRow.getByRole("link", { name: "Review item", exact: true }).click();
+      await staff.waitForURL(url => url.pathname === "/staff/items/" + itemId && url.searchParams.get("claimant") === String(ownClaim.claimant_id));
+      const selected = staff.locator(".selected-claim");
+      await selected.waitFor();
       assert.equal(await selected.getByText("Fictional Proof Owner", { exact: true }).count() > 0, true);
       for (const width of [1440, 390]) {
         await staff.setViewportSize({ width, height: 900 });
-        await detailProof.scrollIntoViewIfNeeded();
-        await overflow(staff, "Staff review " + width);
-        const proofBox = await detailProof.boundingBox(), textBox = await selected.locator(".ownership-evidence").boundingBox();
-        assert.ok(proofBox.x >= textBox.x - 1, "staff proof stays aligned with evidence");
-        await staff.screenshot({ path: join(runtime, "claim-proof-staff-" + width + ".png"), mask: [staff.locator("td:not(:has(details))")] });
+        await checkStaffEvidence(selected, "Proof image browser test", writtenEvidence, true, "staff-item-claim-modal-" + width);
       }
       assert.equal(await staff.locator(".staff-item-images .image-manager-grid figure").count(), 0);
     } finally { await staff.close(); }
     assert.deepEqual(exceptions, []);
-    console.log("PASS optional claim proof: real multipart 201/422, text-only claim, retained draft/network failure, pending duplicate guard, user proof modal focus/Escape/backdrop, compact mixed rows/cards, failed image reads, unchanged staff viewing and 1440/390 layouts.");
+    console.log("PASS optional claim proof: real multipart 201/422, text-only claim, retained draft/network failure, pending duplicate guard, user proof modal focus/Escape/backdrop, compact mixed rows/cards, failed image reads, staff full-evidence modal context/focus/failed photo, exact private claim path and 1440/390 compact layouts.");
     console.log("Claim proof screenshots: " + runtime);
   } finally { await context.close(); }
 }
