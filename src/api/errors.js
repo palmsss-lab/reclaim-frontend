@@ -9,7 +9,7 @@ const messages = Object.assign(Object.create(null), {
   "Verify your email address before using this feature.": "Verify your email before continuing. Open the verification link in your email or request a new one.",
   "The verification link is invalid.": "This verification link is invalid. Request a new link and try again.",
   "The password reset link is invalid or expired.": "This password reset link is invalid or has expired. Request a new reset email.",
-  "The password setup link is invalid, expired, or already used. Request a new link from Account Settings.": "This password setup link is no longer valid. Request a new link from Change password.",
+  "The password setup link is invalid, expired, or already used. Request a new link from Account Settings.": "This setup link is no longer valid. Request another setup email from your account settings.",
   "Google sign-in is not configured. Use your existing sign-in method.": "Google sign-in is unavailable right now. Use your existing sign-in method.",
   "Confirm your current Reclaim password to link Google.": "Enter your current Reclaim password before linking Google.",
   "The Google attempt expired or was already used.": "This Google sign-in attempt has expired. Start sign-in again.",
@@ -100,11 +100,15 @@ export function failureDetails(status, payload, { path = "", method = "GET", ret
       }
     }
   }
+  const accountCreated = status === 503 && path === "auth/register" && payload?.code === "account_created_email_failed" && payload?.account_created === true;
+  const mailFailure = status === 503 && original === "We couldn't send the account email. Try again shortly. If you just registered, sign in to request a new verification email.";
   const inactive = status === 403 && original === "This account is inactive.";
   const protectedAuth = ["auth/logout", "auth/password", "auth/email/verification-notification"].includes(path);
   const expired = status === 419 || (status === 401 && (protectedAuth || !String(path).startsWith("auth/")));
   let message;
   if (expired) message = SESSION_MESSAGE;
+  else if (accountCreated) message = "Your account was created, but the verification email could not be sent. Sign in and request a new verification email. Do not register again.";
+  else if (mailFailure) message = original;
   else if (status === 403) message = messages[original] && ["This account is inactive.", "Verify your email address before using this feature.", "The verification link is invalid."].includes(original) ? messages[original] : "You do not have access to this action. Return to your workspace or contact Reclaim support for help.";
   else if (messages[original] && (status < 500 || (status === 503 && original === "Google sign-in is not configured. Use your existing sign-in method."))) message = messages[original];
   else if (status === 422) message = Object.keys(errors).length ? "Check the highlighted fields and try again." : "These details could not be accepted. Review the form and try again.";
@@ -115,8 +119,9 @@ export function failureDetails(status, payload, { path = "", method = "GET", ret
   else if (path === "auth/password/verify-code") message = "We couldn't confirm code verification. Check your connection and try again. If the code was already accepted, request another code.";
   else if (path === "auth/password/reset") message = "We couldn't confirm the password reset. Try signing in with your new password. If it doesn't work, request another code.";
   else if (path === "auth/password/forgot") message = "We couldn't confirm the reset email was sent. Check your inbox before requesting another code.";
+  else if (path === "auth/register") message = "We couldn't confirm registration. Try signing in before registering again; your account may already have been created.";
   else if (path === "auth/login") message = "We couldn't sign you in right now. Check your connection and try again.";
   else if (path === "auth/logout") message = "We couldn't confirm sign-out. Check your connection and try again.";
   else message = method.toUpperCase() === "GET" ? "We couldn't load this right now. Check your connection and try again." : "We couldn't confirm this change. Check your connection, then refresh the record before trying again; it may already have been saved.";
-  return { message, errors, code: inactive ? "account_inactive" : expired ? "session_expired" : null, recoverable: status === 0 || status >= 500 || status === 429 || status === 409 };
+  return { message, errors, code: accountCreated ? "account_created_email_failed" : inactive ? "account_inactive" : expired ? "session_expired" : null, recoverable: status === 0 || status >= 500 || status === 429 || status === 409 };
 }

@@ -54,6 +54,15 @@ export function LoginPage() {
   </AuthFrame>;
 }
 
+export function RegistrationResult({ result, signInPath }) {
+  const accepted = result?.verification_email?.status === "accepted";
+  return <div className={"notice " + (accepted ? "notice-info" : "notice-error")} role={accepted ? "status" : "alert"}>
+    <strong>Account created</strong>
+    <span>{accepted ? "Your verification email was accepted for sending. Check your inbox and spam folder. Delivery can take a few minutes." : "Your verification email was not confirmed. Sign in and request a new verification email; do not register again."}</span>
+    <Link to={signInPath}>Sign in to verify your email</Link>
+  </div>;
+}
+
 export function RegisterPage() {
   const destination = returnPathFrom(useLocation());
   const [formOpen, setFormOpen] = useState(false);
@@ -69,13 +78,19 @@ export function RegisterPage() {
       setResult(response);
       setFormOpen(false);
       setValues({ full_name: "", contact_details: "", username: "", email: "", password: "", password_confirmation: "" });
-    } catch (requestError) { setError(requestError); }
+    } catch (requestError) {
+      if (requestError.code === "account_created_email_failed") {
+        setResult({ verification_email: { status: "failed" } });
+        setFormOpen(false);
+        setValues({ full_name: "", contact_details: "", username: "", email: "", password: "", password_confirmation: "" });
+      } else setError(requestError);
+    }
     finally { setBusy(false); }
   }
 
   return <AuthFrame eyebrow="GET STARTED" title="Create your account" description="Register as a community member to report found items and claim a match.">
-    {result && <div className="notice notice-success" role="status"><strong>Registration received</strong><span>{result.message} Check your email for the verification link, then sign in.</span></div>}
-    <Panel className="auth-card"><button className="button button-primary auth-submit" type="button" onClick={() => { setError(null); setFormOpen(true); }}>{result ? "Register another account" : "Create account"}</button>
+    {result && <RegistrationResult result={result} signInPath={authPath("/login", destination)} />}
+    <Panel className="auth-card">{!result && <button className="button button-primary auth-submit" type="button" onClick={() => { setError(null); setFormOpen(true); }}>Create account</button>}
       <p className="auth-bottom-copy">Already registered? <Link to={authPath("/login", destination)}>Sign in</Link></p>
     </Panel>
     <FormDialog discardLabel="Discard changes" open={formOpen} title="Create your account" onClose={() => { setFormOpen(false); setValues({ full_name: "", contact_details: "", username: "", email: "", password: "", password_confirmation: "" }); setError(null); }}><ErrorNotice error={error} fields={registrationFields} focus /><form onSubmit={submit} aria-busy={busy || undefined}>
@@ -214,7 +229,7 @@ export function VerifyEmailPage() {
   const [busy, setBusy] = useState(false);
   async function resend() {
     setBusy(true); setError(null); setMessage("");
-    try { const response = await api("auth/email/verification-notification", { method: "POST" }); setMessage(response?.message || "If verification is required, a new email has been sent."); }
+    try { const response = await api("auth/email/verification-notification", { method: "POST" }); setMessage(response?.message || "The email request was not confirmed. Refresh your account status before retrying."); }
     catch (requestError) { setError(requestError); }
     finally { setBusy(false); }
   }
