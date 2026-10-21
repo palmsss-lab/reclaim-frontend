@@ -180,7 +180,14 @@ async function link(page, href) {
   if (href === "/profile") {
     await page.getByRole("button", { name: "Account menu", exact: true }).click();
     await page.getByRole("menuitem", { name: "Profile", exact: true }).click();
-  } else await page.locator('a[href="' + href + '"]').first().click();
+  } else {
+    const selector = 'a[href="' + href + '"]';
+    if (await page.locator(selector).count() && !await page.locator(selector + ":visible").count()) {
+      const toggle = page.locator(".mobile-navigation-toggle");
+      if (await toggle.isVisible()) await toggle.click();
+    }
+    await page.locator(selector + ":visible").first().click();
+  }
   await page.waitForURL(url => url.pathname + url.search === href);
 }
 async function noOverflow(page, label) {
@@ -242,13 +249,16 @@ const authFilter = process.argv.includes("--claim-proofs-only") ? "ClaimProofIma
     const safe = chunk.toString().split(/\r?\n/).filter(line => /Development Server|Accepted$|Closing$|Closed without sending a request/.test(line));
     if (safe.length) appendFileSync(join(runtime, "http-server.txt"), safe.join("\n") + "\n");
   });
-  if (process.argv.includes("--claim-proofs-only") || process.argv.includes("--staff-images-only") || process.argv.includes("--user-findings-only") || process.argv.includes("--password-recovery-only") || process.argv.includes("--session-only")) command(process.execPath, [join(frontend, "node_modules/vite/bin/vite.js"), "build"], { cwd: frontend, env: { ...env, VITE_API_BASE_URL: "/api" } });
-  start(process.execPath, [join(frontend, "node_modules/vite/bin/vite.js"), ...((process.argv.includes("--claim-proofs-only") || process.argv.includes("--staff-images-only") || process.argv.includes("--user-findings-only") || process.argv.includes("--password-recovery-only") || process.argv.includes("--session-only")) ? ["preview"] : []), "--host", "127.0.0.1", "--port", "5174", "--strictPort"], { cwd: frontend, env: { ...env, VITE_API_BASE_URL: "/api", VITE_API_PROXY_TARGET: apiOrigin } });
+  if (process.argv.includes("--navigation-only") || process.argv.includes("--claim-proofs-only") || process.argv.includes("--staff-images-only") || process.argv.includes("--user-findings-only") || process.argv.includes("--password-recovery-only") || process.argv.includes("--session-only")) command(process.execPath, [join(frontend, "node_modules/vite/bin/vite.js"), "build"], { cwd: frontend, env: { ...env, VITE_API_BASE_URL: "/api" } });
+  start(process.execPath, [join(frontend, "node_modules/vite/bin/vite.js"), ...((process.argv.includes("--navigation-only") || process.argv.includes("--claim-proofs-only") || process.argv.includes("--staff-images-only") || process.argv.includes("--user-findings-only") || process.argv.includes("--password-recovery-only") || process.argv.includes("--session-only")) ? ["preview"] : []), "--host", "127.0.0.1", "--port", "5174", "--strictPort"], { cwd: frontend, env: { ...env, VITE_API_BASE_URL: "/api", VITE_API_PROXY_TARGET: apiOrigin } });
   await waitFor(async () => { try { return (await fetch(uiOrigin)).ok; } catch { return false; } }, "Vite");
   await http("public/items");
 
   browser = await chromium.launch({ channel: "chrome", headless: true });
-  if (process.argv.includes("--claim-proofs-only")) {
+  if (process.argv.includes("--navigation-only")) {
+    const { verifyNavigation } = await import("./verify-navigation.mjs");
+    await verifyNavigation({ browser, http, password, fixture, uiOrigin, runtime });
+  } else if (process.argv.includes("--claim-proofs-only")) {
     const { verifyClaimProofs } = await import("./verify-claim-proofs.mjs");
     await verifyClaimProofs({ browser, http, password, fixture, uiOrigin, runtime });
   } else if (process.argv.includes("--password-recovery-only")) {

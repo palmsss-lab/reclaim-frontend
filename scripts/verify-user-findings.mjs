@@ -203,6 +203,8 @@ export async function verifyUserFindings({ browser, http, upload, password, fixt
     await page.waitForFunction(() => document.querySelector("main h1").getBoundingClientRect().top >= document.querySelector(".public-header").getBoundingClientRect().bottom);
     assert.equal(await page.locator("main").evaluate(el => el === document.activeElement), true, "skip link reaches unobscured main content");
 
+    const mobileNavigation = page.getByRole("button", { name: "Main navigation", exact: true });
+    if (await mobileNavigation.isVisible()) await mobileNavigation.click();
     await page.getByRole("navigation", { name: "Main navigation", exact: true }).getByRole("link", { name: "My claims", exact: true }).click();
     await page.waitForURL(url => url.pathname === "/my/claims");
     await page.getByRole("heading", { name: "My claims", exact: true }).waitFor();

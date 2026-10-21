@@ -1,10 +1,51 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import Brand from "./Brand";
 import AccountMenu from "./AccountMenu";
 import { ErrorNotice } from "./ui";
+import { FormDialog } from "./FormDialog";
 import "./Shell.css";
+
+function MainNavigation({ staff = false, id }) {
+  const { session } = useAuth();
+  return <nav id={id} className="public-navigation" aria-label="Main navigation">
+      {staff ? <NavLink to="/staff" end>Staff dashboard</NavLink> : <>
+        <NavLink to="/" end>Browse items</NavLink>
+        {session?.role === "user" && <>
+          <NavLink to="/my">My Reclaim</NavLink>
+          <NavLink to="/my/missing-reports">My missing items</NavLink>
+          <NavLink to="/my/finder-reports">My found-item reports</NavLink>
+          <NavLink to="/my/claims">My claims</NavLink>
+        </>}
+        {session?.role === "staff" && <Link to="/staff">Staff dashboard</Link>}
+      </>}
+    </nav>;
+}
+
+function MobileNavigation({ staff }) {
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const navigationId = useId();
+  const label = staff ? "Staff navigation" : "Main navigation";
+  useEffect(() => { setOpen(false); }, [location.pathname, location.search, location.hash]);
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 760px)");
+    const resized = event => { if (!event.matches) setOpen(false); };
+    mobile.addEventListener("change", resized);
+    return () => mobile.removeEventListener("change", resized);
+  }, []);
+  return <div className="mobile-navigation">
+    <button className="button button-secondary mobile-navigation-toggle" type="button" aria-label={label} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? navigationId : undefined} onClick={() => setOpen(true)}>
+      <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+    </button>
+    <FormDialog open={open} title={label} closeLabel="Close navigation" className="mobile-navigation-dialog" onClose={() => setOpen(false)}>
+      <div onClick={event => { if (event.target.closest("a[href]")) setOpen(false); }}>
+        {staff ? <StaffNavigation id={navigationId} /> : <MainNavigation id={navigationId} />}
+      </div>
+    </FormDialog>
+  </div>;
+}
 
 function SiteHeader({ staff = false, headerRef }) {
   const { session, logout } = useAuth();
@@ -21,18 +62,8 @@ function SiteHeader({ staff = false, headerRef }) {
   }
   return <header ref={headerRef} className="public-header"><div className="public-header-inner">
     <Brand to={staff ? "/staff" : "/"} />
-    <nav className="public-navigation" aria-label="Main navigation">
-      {staff ? <NavLink to="/staff" end>Staff dashboard</NavLink> : <>
-        <NavLink to="/" end>Browse items</NavLink>
-        {session?.role === "user" && <>
-          <NavLink to="/my">My Reclaim</NavLink>
-          <NavLink to="/my/missing-reports">My missing items</NavLink>
-          <NavLink to="/my/finder-reports">My found-item reports</NavLink>
-          <NavLink to="/my/claims">My claims</NavLink>
-        </>}
-        {session?.role === "staff" && <Link to="/staff">Staff dashboard</Link>}
-      </>}
-    </nav>
+    <MainNavigation staff={staff} />
+    <MobileNavigation staff={staff} />
     <div className="account-menu">
       {session ? <AccountMenu onSignOut={signOut} signingOut={signingOut} /> : <Link className="button button-primary" to="/login">Sign in</Link>}
     </div>
@@ -76,44 +107,11 @@ const staffNavGroups = [
   ] },
 ];
 
-export function StaffShell() {
+function StaffNavigation({ id }) {
   const { session } = useAuth();
   const location = useLocation();
-  const [navigationOpen, setNavigationOpen] = useState(false);
-  const navigationButton = useRef(null);
-  const sidebar = useRef(null);
-  useEffect(() => {
-    const element = sidebar.current;
-    const measure = () => element.style.setProperty("--staff-sidebar-height", element.getBoundingClientRect().height + "px");
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    measure();
-    return () => observer.disconnect();
-  }, []);
-  useEffect(() => { setNavigationOpen(false); }, [location.pathname, location.search]);
-  function dismissNavigation(event) {
-    if (event.key === "Escape" && navigationOpen) {
-      setNavigationOpen(false);
-      navigationButton.current?.focus();
-    }
-  }
-  function revealNavigationFocus(event) {
-    const target = event.target;
-    requestAnimationFrame(() => {
-      if (target.isConnected && target.matches(":focus-visible")) target.scrollIntoView({ block: "nearest", behavior: "instant" });
-    });
-  }
   const referenceType = new URLSearchParams(location.search).get("type") || "categories";
-  return <div className="staff-app-shell">
-    <a className="skip-link" href="#main">Skip to content</a>
-    <SiteHeader staff />
-    <div className="staff-shell">
-      <aside ref={sidebar} className="staff-sidebar" aria-label="Staff workspace" onKeyDown={dismissNavigation} onFocus={revealNavigationFocus}>
-        <button ref={navigationButton} className="staff-navigation-toggle" type="button" aria-expanded={navigationOpen} aria-controls="staff-navigation" onClick={() => setNavigationOpen(open => !open)}>
-          <span>Staff navigation</span><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d={navigationOpen ? "m6 15 6-6 6 6" : "m6 9 6 6 6-6"} /></svg>
-        </button>
-        <p className="sidebar-label">Staff workspace</p>
-        <nav id="staff-navigation" className={"staff-navigation" + (navigationOpen ? " is-open" : "")} aria-label="Staff navigation">
+  return <nav id={id} className="staff-navigation" aria-label="Staff navigation">
           {staffNavGroups.map(group => <div className="staff-nav-group" key={group.label}>
             <p className="sidebar-label">{group.label}</p>
             {group.links.map(link => <NavLink key={link.to} to={link.to} end={link.end}>{link.label}</NavLink>)}
@@ -130,7 +128,33 @@ export function StaffShell() {
           <NavLink to="/staff/security">Change password</NavLink>
           {session?.isAccountAdmin === true && <NavLink to="/admin/accounts">Account administration</NavLink>}
           </div>
-        </nav>
+        </nav>;
+}
+
+export function StaffShell() {
+  const { session } = useAuth();
+  const sidebar = useRef(null);
+  useEffect(() => {
+    const element = sidebar.current;
+    const measure = () => element.style.setProperty("--staff-sidebar-height", element.getBoundingClientRect().height + "px");
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  function revealNavigationFocus(event) {
+    const target = event.target;
+    requestAnimationFrame(() => {
+      if (target.isConnected && target.matches(":focus-visible")) target.scrollIntoView({ block: "nearest", behavior: "instant" });
+    });
+  }
+  return <div className="staff-app-shell">
+    <a className="skip-link" href="#main">Skip to content</a>
+    <SiteHeader staff />
+    <div className="staff-shell">
+      <aside ref={sidebar} className="staff-sidebar" aria-label="Staff workspace" onFocus={revealNavigationFocus}>
+        <p className="sidebar-label">Staff workspace</p>
+        <StaffNavigation />
         <div className="sidebar-bottom">Signed in as {session?.identity?.full_name}<br /><span>{session?.isAccountAdmin ? "Administrator" : "Staff member"}</span></div>
       </aside>
       <main id="main" className="staff-content"><Outlet /></main>
