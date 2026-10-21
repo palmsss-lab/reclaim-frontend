@@ -1,0 +1,19 @@
+.workflow-form, .workflow-fields, .workflow-grid, .workflow-field { min-width: 0; }
+.workflow-required-note { margin: 0 0 24px; color: var(--muted); font-size: 13px; }
+.workflow-fields { display: grid; gap: 24px; }
+.workflow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; align-items: start; }
+.workflow-field-wide { grid-column: 1 / -1; min-width: 0; }
+.workflow-form :is(input, select, textarea) { min-width: 0; max-width: 100%; }
+.workflow-form :is(label, small, .notice) { overflow-wrap: anywhere; }
+.workflow-section { min-width: 0; margin: 0; padding: 24px 0 0; border: 0; border-top: 1px solid var(--line); }
+.workflow-section legend { padding: 0 12px 0 0; color: var(--ink); font-size: 16px; font-weight: 600; }
+.workflow-error-summary:focus { outline: 3px solid var(--focus); outline-offset: 3px; }
+.workflow-error-summary a { color: inherit; text-decoration: underline; }
+.workflow-error-summary ul { margin-bottom: 0; padding-left: 20px; }
+.workflow-error-summary li + li { margin-top: 8px; }
+.workflow-actions .button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .workflow-grid { grid-template-columns: minmax(0, 1fr); }
+  .workflow-actions { align-items: stretch; flex-direction: column; }
+  .workflow-actions .button { width: 100%; }
+}

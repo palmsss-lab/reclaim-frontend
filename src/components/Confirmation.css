@@ -1,0 +1,5 @@
+.confirmation-dialog { border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; max-width: 560px; width: calc(100% - 32px); color: var(--navy); background: var(--surface); max-height: 85vh; overflow: auto; }
+.confirmation-dialog::backdrop { background: #10283177; }
+.confirmation-dialog h2 { margin-bottom: 16px; }
+.confirmation-dialog p { overflow-wrap: anywhere; }
+.dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }

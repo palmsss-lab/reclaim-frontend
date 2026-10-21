@@ -1,0 +1,47 @@
+.images-panel { margin-block: 1.25rem; min-width: 0; }
+.draft-image { min-width: 0; margin-block: 1rem; }
+.draft-image input[type=file] { width: 100%; max-width: 100%; min-width: 0; }
+.record-draft-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.image-manager-grid, .public-photo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 1rem; width: 100%; }
+.image-manager-grid figure { margin: 0; min-width: 0; }
+.item-photograph { display: block; width: 100%; max-height: 320px; object-fit: contain; border-radius: var(--radius-control); background: var(--surface-muted); }
+.image-manager-grid figcaption { margin-block: .6rem; font-size: .875rem; }
+.image-controls { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+.selected-image-preview { display: block; max-width: 100%; width: 200px; max-height: 200px; object-fit: contain; margin-block: 1rem; border-radius: var(--radius-control); }
+.images-panel input[type=file] { max-width: 100%; width: 100%; }
+.images-panel .button[aria-disabled="true"] { cursor: not-allowed; opacity: .65; }
+.image-focus-target:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.detail-art .public-photo-grid { padding: 1rem; }
+@media (max-width: 600px) { .image-manager-grid { grid-template-columns: 1fr; } .image-controls { align-items: stretch; flex-direction: column; } }
+
+
+/* Publication controls are used only on the staff found-item detail page. */
+.staff-item-images { max-width: 100%; overflow-wrap: anywhere; }
+.staff-item-images .image-focus-target p { max-width: 75ch; margin: 0 0 1rem; }
+.staff-item-images .image-manager-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); align-items: start; }
+.staff-item-images .image-manager-grid figure { width: 100%; max-width: 22rem; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); }
+.staff-item-images .image-manager-grid .item-photograph { aspect-ratio: 4 / 3; height: auto; max-height: 220px; }
+.staff-item-images figcaption { display: grid; gap: 4px; margin-block: 12px; font-weight: 600; }
+.staff-item-images .image-privacy-status { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.staff-item-images .image-controls { display: grid; gap: 8px; }
+.staff-item-images .image-controls > .button { width: 100%; min-height: 44px; }
+.staff-item-images .image-more-actions { position: relative; min-width: 0; }
+.staff-item-images .image-more-actions summary { min-height: 44px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--ink); cursor: pointer; font-weight: 600; }
+.staff-item-images .image-more-actions summary:hover { background: var(--surface-muted); }
+.staff-item-images .image-more-actions summary[aria-disabled=true] { opacity: .65; cursor: not-allowed; }
+.staff-item-images .image-more-options { position: absolute; z-index: 20; top: calc(100% + 4px); inset-inline: 0; padding: 6px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); box-shadow: var(--shadow); }
+.staff-item-images .image-more-options .text-button { width: 100%; justify-content: flex-start; text-decoration: none; border-radius: var(--radius-control); }
+.staff-item-images .image-more-options .text-button:hover { background: var(--teal-soft); }
+.staff-item-images figure > [role=status] { display: grid; place-items: center; aspect-ratio: 4 / 3; max-height: 220px; border-radius: var(--radius-control); background: var(--surface-muted); }
+
+.claim-evidence { min-width: 0; }
+.claim-proof { min-width: 0; max-width: 24rem; margin-block: .75rem; overflow-wrap: anywhere; }
+.claim-proof summary { cursor: pointer; padding-block: .5rem; color: var(--teal); font-weight: 600; }
+.claim-proof summary:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.claim-proof .item-photograph { margin-block: .75rem; max-height: 320px; }
+
+.claim-proof-trigger { min-width: 0; margin-top: .5rem; }
+.claim-proof-dialog { width: min(calc(100% - 2rem), 64rem); }
+.claim-proof-dialog .form-dialog-body { display: grid; place-items: center; }
+.claim-proof-dialog .item-photograph { width: auto; height: auto; max-width: 100%; max-height: min(36rem, calc(88dvh - 10rem)); object-fit: contain; }
+@media (max-width: 600px) { .claim-proof-dialog { width: calc(100% - 1rem); } }

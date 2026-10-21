@@ -1,0 +1,23 @@
+.inventory-filter-form { display: grid; grid-template-columns: minmax(140px,1.4fr) minmax(112px,.9fr) minmax(128px,1fr) repeat(2,minmax(146px,1fr)) auto; gap: 12px; align-items: start; margin-bottom: 8px; }
+.inventory-filter-form :is(input, select, .button) { min-width: 0; width: 100%; height: 48px; }
+.inventory-filter-form .button { padding-inline: 16px; margin-top: calc(14px * 1.6 + 6px); }
+.inventory-filter-help { margin: 0 0 24px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+@media(max-width:1199px) { .inventory-filter-form { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+.item-detail-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(300px,.9fr); gap: 24px; align-items: start; }
+.inventory-action-stack { display: grid; gap: 24px; }
+.inventory-action-stack .panel { padding: 20px; }
+.inventory-lower-panel { margin-top: 24px; }
+.selected-claim { outline: 2px solid var(--focus); outline-offset: -2px; background: var(--teal-soft); }
+.selected-claim-label { display: block; margin-top: 4px; color: var(--teal-dark); font-size: 13px; font-weight: 600; }
+.ownership-evidence { min-width: 0; max-width: 32rem; }
+.ownership-evidence summary { min-height: 44px; padding-block: 10px; color: var(--teal-dark); cursor: pointer; }
+.ownership-evidence summary:hover { text-decoration: underline; }
+.ownership-evidence p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.claim-decision { display: grid; gap: 8px; }
+.muted-copy { color: var(--muted); font-size: .9rem; }
+.report-filter-panel { margin-bottom: 15px; }
+.report-filter-form { display: grid; grid-template-columns: repeat(4,minmax(130px,1fr)) auto; gap: 16px; align-items: end; }
+.staff-report-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; align-items: start; }
+@media(max-width:1050px) { .item-detail-grid { grid-template-columns: 1fr; } .report-filter-form { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:700px) { .inventory-filter-form, .report-filter-form, .staff-report-grid { grid-template-columns: 1fr; } }
+@media(max-width:700px) { .inventory-filter-form .button { margin-top: 0; } }

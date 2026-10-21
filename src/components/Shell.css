@@ -1,0 +1,80 @@
+.public-app-shell, .staff-app-shell { min-height: 100dvh; display: flex; flex-direction: column; }
+.public-header { background: var(--surface); border-bottom: 1px solid var(--line); }
+.public-app-shell > .public-header { position: sticky; top: 0; z-index: 40; }
+.public-app-shell > .public-main { scroll-margin-top: var(--public-header-height, 0px); }
+.public-header-inner { max-width: 1500px; margin: auto; padding: 18px 32px; display: flex; align-items: center; gap: 32px; }
+.public-navigation { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; }
+.public-navigation a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none; }
+.public-navigation a:hover { color: var(--teal-dark); }
+.public-navigation a.active { color: var(--teal-dark); text-decoration: underline; text-underline-offset: 12px; text-decoration-thickness: 3px; }
+.account-menu { margin-left: auto; display: flex; align-items: center; gap: 12px; min-width: 0; }
+.account-name { color: var(--navy); font-size: 14px; max-width: 180px; overflow-wrap: anywhere; }
+a.account-name { display: inline-flex; align-items: center; min-height: 44px; }
+.account-menu .button { flex-shrink: 0; }
+.logout-error { max-width: 1500px; padding: 0 18px; margin: auto; }
+.public-main { width: 100%; max-width: 1440px; margin: 0 auto; padding: 40px 32px; min-width: 0; flex: 1; }
+.public-footer { text-align: center; color: var(--muted); font-size: 12px; padding: 24px; }
+.skip-link { position: fixed; top: -100px; left: 12px; z-index: 100; padding: 12px 18px; border-radius: var(--radius-control); color: var(--navy); background: var(--surface); box-shadow: var(--shadow); }
+.skip-link:focus { top: 12px; }
+.staff-shell { display: grid; grid-template-columns: 220px minmax(0,1fr); flex: 1; }
+.staff-sidebar { min-width: 0; background: var(--surface-muted); color: var(--ink); border-right: 1px solid var(--line); padding: 28px 16px; }
+.sidebar-label { margin: 0 12px 18px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.sidebar-label-spaced { margin-top: 25px; margin-bottom: 12px; }
+.staff-navigation a { display: flex; align-items: center; min-height: 44px; color: var(--ink); padding: 11px 14px; border: 1px solid transparent; border-radius: var(--radius-control); margin-bottom: 5px; font-size: 14px; text-decoration: none; transition: background .15s ease; }
+.staff-navigation a:hover { background: var(--teal-soft); color: var(--teal-dark); }
+.staff-navigation a.active { background: var(--teal-soft); border-color: #aacbc3; color: var(--teal-dark); font-weight: 600; }
+.staff-nav-group { margin-bottom: 16px; }
+.staff-nav-group .sidebar-label { margin: 0 12px 8px; }
+.staff-nav-secondary { padding-top: 14px; border-top: 1px solid var(--line); }
+.staff-nav-secondary .sidebar-label { margin-top: 0; }
+.staff-sidebar :focus-visible { outline-color: var(--focus); }
+.sidebar-bottom { border-top: 1px solid var(--line); margin: 25px 10px 0; padding-top: 18px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.staff-content { width: 100%; max-width: 1440px; min-width: 0; margin: 0 auto; padding: 40px 32px; }
+.staff-navigation-toggle { display: none; }
+/* The header stays in flow; tall navigation reveals its bottom through page scrolling. */
+@media (min-width:761px) {
+  .staff-sidebar { position: sticky; align-self: start; top: min(16px, calc(100dvh - var(--staff-sidebar-height, 100dvh) - 16px)); }
+  /* Native focus scrolling must be able to reveal either end of tall navigation. */
+  .staff-sidebar:has(:focus-visible) { position: relative; top: 0; }
+}
+.staff-content .page-heading > div { min-width: 0; }
+.staff-content .page-heading { flex-wrap: wrap; }
+.staff-content .button { max-width: 100%; white-space: normal; overflow-wrap: anywhere; text-align: center; }
+.staff-content .table-scroll a { display: inline-flex; align-items: center; min-height: 44px; }
+.text-button { display: inline-flex; align-items: center; min-height: 44px; padding: 6px 8px; border: 0; background: transparent; color: var(--teal-dark); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+@media (min-width:1500px) { .public-main, .staff-content { padding: 40px; } }
+@media (max-width:1100px) {
+  .public-header-inner { gap: 20px; padding-inline: 24px; flex-wrap: wrap; }
+  .public-navigation { gap: 8px 16px; }
+  .public-app-shell .public-navigation { order: 3; width: 100%; }
+  .staff-shell { grid-template-columns: 205px minmax(0,1fr); }
+  .public-main, .staff-content { padding: 32px 24px; }
+}
+@media (max-width:760px) {
+  .public-header-inner { gap: 8px 16px; padding: 14px 18px; }
+  .public-navigation { order: 3; width: 100%; gap: 8px 16px; padding-bottom: 2px; }
+  .public-navigation a.active { text-underline-offset: 8px; }
+  .public-main, .staff-content { padding: 28px 18px; }
+  .staff-shell { display: block; }
+  .staff-sidebar { padding: 10px 18px; }
+  .staff-navigation-toggle { width: 100%; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--control-border); border-radius: var(--radius-control); color: var(--ink); background: var(--surface); font-weight: 600; }
+  .staff-navigation { display: none; padding-top: 14px; }
+  .staff-navigation.is-open { display: block; }
+  .staff-nav-group { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-bottom: 14px; }
+  .staff-nav-group .sidebar-label { grid-column: 1 / -1; margin: 8px 12px 2px; }
+  .staff-nav-secondary { padding-top: 10px; border-top: 1px solid var(--line); }
+  .staff-navigation a { margin: 0; padding: 10px 12px; font-size: 14px; }
+  .staff-sidebar > .sidebar-label, .sidebar-bottom { display: none; }
+  .staff-navigation .sidebar-label { grid-column: 1 / -1; margin: 16px 12px 6px; }
+  .account-name { max-width: 100px; font-size: 12px; }
+  .brand { font-size: 25px; }
+  .account-menu { gap: 8px; }
+  .account-menu .button { padding-inline: 12px; }
+}
+@media (max-width:480px) {
+  .public-header-inner .public-navigation { border-top: 1px solid var(--line); padding-top: 8px; }
+  .account-menu { flex-wrap: wrap; justify-content: flex-end; flex: 1; }
+  .account-name { max-width: 90px; }
+  .brand { gap: 6px; font-size: 23px; }
+  .brand img { width: 32px; height: 32px; }
+}

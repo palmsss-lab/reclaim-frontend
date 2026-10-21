@@ -1,0 +1,13 @@
+.auth-layout { max-width: 500px; margin: 24px auto 48px; }
+.auth-content.panel { padding: 32px; border-radius: var(--radius); }
+.auth-content { min-width: 0; }
+.auth-content h1 { font-size: 28px; }
+.auth-content .page-heading { margin-bottom: 20px; }
+.auth-content .page-description { font-size: 14px; }
+.auth-content .auth-card { padding: 0; border: 0; box-shadow: none; }
+.auth-form-stack { display: grid; gap: 24px; }
+.auth-inline-link { display: flex; justify-content: flex-end; margin-top: 12px; font-size: 14px; }
+.auth-submit { width: 100%; margin-top: 20px; }
+.auth-bottom-copy { margin: 20px 0 0; color: var(--muted); text-align: center; font-size: 14px; }
+.muted-copy { color: var(--muted); font-size: 14px; }
+@media (max-width:760px) { .auth-layout { margin: 4px auto 24px; } .auth-content.panel { padding: 24px 20px; } }

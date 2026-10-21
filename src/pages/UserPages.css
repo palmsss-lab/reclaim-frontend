@@ -1,0 +1,31 @@
+.user-workspace .page-heading { margin-bottom: 22px; }
+.user-stats { grid-template-columns: repeat(4,minmax(0,1fr)); }
+.user-verified-value { color: var(--teal-dark) !important; font-size: 1.25rem !important; }
+.user-dashboard-grid { display: grid; grid-template-columns: minmax(0,1.45fr) minmax(280px,.8fr); gap: 24px; align-items: start; }
+.user-activity-list { display: grid; }
+.user-activity-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 13px 2px; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.user-activity-row:last-child { border-bottom: 0; }
+.user-activity-row > span:nth-child(2) { display: grid; flex: 1; min-width: 0; }
+.user-activity-row strong { color: var(--navy); overflow-wrap: anywhere; }
+.user-activity-row small { color: var(--muted); font-size: 14px; }
+.activity-icon { width: 42px; height: 42px; display: grid; flex: none; place-items: center; border-radius: var(--radius-control); color: var(--teal-dark); background: var(--teal-soft); font-weight: 800; }
+.quick-link-list { display: grid; }
+.quick-link-list a { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); color: inherit; text-decoration: none; }
+.quick-link-list a:last-child { border-bottom: 0; }
+.quick-link-list a > span { color: var(--teal-dark); font-size: 13px; font-weight: 800; }
+.quick-link-list a > div { display: grid; flex: 1; }
+.quick-link-list strong { color: var(--navy); }
+.quick-link-list small { color: var(--muted); font-size: 14px; }
+.quick-link-list b { color: var(--teal-dark); font-size: 1.15rem; }
+.report-form-wrap { margin-bottom: 18px; }
+.table-subline { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.evidence-preview { display: block; max-width: 310px; max-height: 90px; overflow: auto; white-space: pre-wrap; }
+.profile-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; align-items: start; }
+@media (max-width:900px) { .user-dashboard-grid, .profile-grid { grid-template-columns: 1fr; } }
+@media (max-width:650px) { .user-stats { grid-template-columns: 1fr 1fr; } .user-dashboard-grid { gap: 16px; } }
+@media (max-width:480px) { .user-stats, .profile-grid { grid-template-columns: 1fr; } .user-activity-row { flex-wrap: wrap; } }
+
+.user-activity-row > .user-status { flex: 0 1 45%; min-width: 0; }
+@media (max-width: 480px) { .user-activity-row > .user-status { flex-basis: 100%; } }
+
+.user-claims-panel td { vertical-align: top; }

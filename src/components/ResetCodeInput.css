@@ -1,0 +1,6 @@
+.reset-code-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.reset-code-group legend { margin-bottom: 8px; padding: 0; font-weight: 600; }
+.reset-code-boxes { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(4px, 2vw, 8px); }
+.reset-code-boxes input { width: 100%; min-width: 0; min-height: 52px; padding: 8px 0; text-align: center; font-size: 24px; font-variant-numeric: tabular-nums; }
+.reset-code-group small { display: block; margin-top: 8px; }
+.reset-code-group:disabled { opacity: .7; }

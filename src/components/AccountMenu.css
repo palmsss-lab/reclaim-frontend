@@ -1,0 +1,6 @@
+.account-dropdown { position: relative; }
+.account-trigger { min-width: 44px; min-height: 44px; padding: 10px; display: inline-flex; align-items: center; justify-content: center; }
+.account-dropdown-card { position: absolute; top: calc(100% + 8px); right: 0; z-index: 30; width: min(260px, calc(100vw - 36px)); padding: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-control); box-shadow: var(--shadow); }
+.account-dropdown-name { margin: 4px 10px 8px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.account-dropdown [role="menuitem"] { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 10px; border: 0; border-radius: var(--radius-control); background: transparent; color: var(--ink); font: inherit; text-decoration: none; text-align: left; cursor: pointer; }
+.account-dropdown [role="menuitem"]:hover, .account-dropdown [role="menuitem"]:focus-visible { background: var(--teal-soft); color: var(--teal-dark); }

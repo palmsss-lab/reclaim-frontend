@@ -1,0 +1,29 @@
+.staff-profile-layout { display: grid; grid-template-columns: minmax(240px, .75fr) minmax(0, 1.6fr); gap: 24px; align-items: start; }
+.staff-profile-person { display: flex; align-items: center; gap: 16px; }
+.staff-profile-person > div { min-width: 0; }
+.staff-profile-avatar { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 56px; height: 56px; border-radius: var(--radius); background: var(--teal-soft); color: var(--teal-dark); }
+.staff-profile-name { margin: 0 0 4px; font-size: 20px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.staff-profile-role { margin: 0; font-size: 14px; color: var(--muted); }
+.staff-profile-details { margin: 24px 0 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.staff-profile-details > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
+.staff-profile-details dt { color: var(--muted); font-size: 14px; }
+.staff-profile-details dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.staff-profile-identity-note { margin: 0; color: var(--muted); font-size: 13px; }
+.staff-profile .username-settings { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; padding-bottom: 28px; margin-bottom: 28px; }
+.staff-profile .username-settings > h3, .staff-profile .username-settings > p { grid-column: 1; }
+.staff-profile .username-settings > p { margin-bottom: 0; }
+.staff-profile .username-settings > button { grid-column: 2; grid-row: 1 / 3; align-self: center; }
+.staff-profile .username-settings > form, .staff-profile .username-settings > .notice { grid-column: 1 / -1; }
+.staff-profile .username-settings > form { margin-top: 20px; }
+.staff-profile .username-settings > .notice { margin-top: 16px; margin-bottom: 0; }
+.staff-profile .account-sign-in-status { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 16px 0 24px; }
+.staff-profile .account-sign-in-status p { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-control); color: var(--muted); font-size: 14px; }
+.staff-profile .account-sign-in-status strong { color: var(--ink); font-size: 16px; }
+.staff-profile .account-sign-in-methods > p { max-width: 60ch; color: var(--muted); font-size: 14px; }
+.staff-profile .account-sign-in-methods .field { margin-bottom: 16px; }
+@media (max-width: 1050px) { .staff-profile-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) {
+  .staff-profile .username-settings { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .staff-profile .username-settings > button { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 8px; }
+  .staff-profile .account-sign-in-status { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}

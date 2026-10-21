@@ -1,0 +1,15 @@
+.admin-create-panel { margin-bottom: 16px; }
+.admin-search { display: grid; grid-template-columns: minmax(180px,1fr) auto; gap: 16px; align-items: end; margin-bottom: 17px; }
+.admin-search .button { min-width: 92px; }
+.admin-search ~ h3 { margin-top: 24px; }
+.admin-search ~ .muted-copy { margin-top: 12px; }
+.account-detail-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; align-items: start; }
+.muted-copy { color: var(--muted); font-size: .88rem; }
+.reference-tabs { margin-bottom: 14px; padding: 8px; }
+.reference-tabs nav { display: flex; flex-wrap: wrap; gap: 4px; }
+.reference-tab { min-height: 44px; padding: 0 15px; border: 0; border-radius: 7px; color: var(--muted); background: transparent; font-weight: 650; }
+.reference-tab:hover, .reference-tab.active { color: var(--teal-dark); background: var(--teal-soft); }
+.reference-layout { display: grid; grid-template-columns: minmax(260px,.7fr) minmax(0,1.3fr); gap: 24px; align-items: start; }
+.reference-layout .muted-copy { margin: 17px 0 0; }
+@media(max-width:900px) { .account-detail-grid, .reference-layout { grid-template-columns: 1fr; } }
+@media(max-width:520px) { .admin-search { grid-template-columns: 1fr; } .admin-search .button { width: 100%; } }
