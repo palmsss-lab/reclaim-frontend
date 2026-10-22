@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router";
-import { api } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import { useSuccessToast } from "../components/Toast";
 import { ErrorNotice, Field, PageHeading, Panel, SuccessNotice } from "../components/ui";
@@ -58,7 +58,7 @@ export function RegistrationResult({ result, signInPath }) {
   const accepted = result?.verification_email?.status === "accepted";
   return <div className={"notice " + (accepted ? "notice-info" : "notice-error")} role={accepted ? "status" : "alert"}>
     <strong>Account created</strong>
-    <span>{accepted ? "Your verification email was accepted for sending. Check your inbox and spam folder. Delivery can take a few minutes." : "Your verification email was not confirmed. Sign in and request a new verification email; do not register again."}</span>
+    <span>{accepted ? "Your verification code email was accepted for sending. Sign in and enter the six-digit code within 10 minutes. Check your inbox and spam folder." : "Your verification email was not confirmed. Sign in and request a new verification email; do not register again."}</span>
     <Link to={signInPath}>Sign in to verify your email</Link>
   </div>;
 }
@@ -89,7 +89,7 @@ export function RegisterPage() {
   }
 
   return <AuthFrame eyebrow="GET STARTED" title="Create your account" description="Register as a community member to report found items and claim a match.">
-    {result && <RegistrationResult result={result} signInPath={authPath("/login", destination)} />}
+    {result && <RegistrationResult result={result} signInPath={authPath("/login", destination || "/verify-email")} />}
     <Panel className="auth-card">{!result && <button className="button button-primary auth-submit" type="button" onClick={() => { setError(null); setFormOpen(true); }}>Create account</button>}
       <p className="auth-bottom-copy">Already registered? <Link to={authPath("/login", destination)}>Sign in</Link></p>
     </Panel>
@@ -226,26 +226,80 @@ export function VerifyEmailPage() {
   const { session, refreshIdentity } = useAuth();
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
+  const [code, setCode] = useState(Array(6).fill(""));
   const [busy, setBusy] = useState(false);
+  const [resendAt, setResendAt] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const pending = useRef(false);
+  const success = useRef(null);
+  const verified = session?.role === "user" && session.identity?.email_verified;
+  const remaining = Math.max(0, Math.ceil((resendAt - now) / 1000));
+  useEffect(() => {
+    if (resendAt <= Date.now()) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [resendAt]);
+  useEffect(() => { if (verified) success.current?.focus(); }, [verified]);
+  // Clear private form state when the signed-in account changes.
+  useEffect(() => { setCode(Array(6).fill("")); setError(null); setMessage(""); setResendAt(0); }, [session?.identity?.user_id]);
   async function resend() {
-    setBusy(true); setError(null); setMessage("");
-    try { const response = await api("auth/email/verification-notification", { method: "POST" }); setMessage(response?.message || "The email request was not confirmed. Refresh your account status before retrying."); }
-    catch (requestError) { setError(requestError); }
-    finally { setBusy(false); }
+    if (pending.current || remaining > 0) return;
+    pending.current = true; setBusy(true); setError(null); setMessage("");
+    try {
+      const response = await api("auth/email/verification-notification", { method: "POST" });
+      setMessage(response?.message || "The email request was not confirmed. Check your inbox before retrying.");
+      setCode(Array(6).fill(""));
+      const requestedAt = Date.now(); setNow(requestedAt); setResendAt(requestedAt + 60000);
+    } catch (requestError) { setError(requestError); }
+    finally { pending.current = false; setBusy(false); }
   }
   async function refresh() {
-    setBusy(true); setError(null);
-    try { const current = await refreshIdentity(); if (current) notify("Account status refreshed."); if (current?.identity?.email_verified && destination) navigate(destination, { replace: true }); }
-    catch (requestError) { setError(requestError); }
-    finally { setBusy(false); }
+    if (pending.current) return;
+    pending.current = true; setBusy(true); setError(null);
+    try {
+      const current = await refreshIdentity();
+      if (current) notify("Account status refreshed.");
+      if (current?.identity?.email_verified && destination) navigate(destination, { replace: true });
+    } catch (requestError) { setError(requestError); }
+    finally { pending.current = false; setBusy(false); }
   }
-  const verified = session?.role === "user" && session.identity?.email_verified;
+  async function submit(event) {
+    event.preventDefault(); if (pending.current) return;
+    pending.current = true; setBusy(true); setError(null); setMessage("");
+    try {
+      const response = await api("auth/email/verify-code", { method: "POST", body: { code: code.join("") } });
+      if (response?.data?.email_verified !== true) throw new ApiError("Email verification was not confirmed. Choose Refresh status before trying again.");
+      setCode(Array(6).fill(""));
+      const current = await refreshIdentity();
+      if (current?.identity?.email_verified) {
+        notify("Email verified.");
+        if (destination) navigate(destination, { replace: true });
+      }
+    } catch (requestError) { setError(requestError); }
+    finally { pending.current = false; setBusy(false); }
+  }
   return <AuthFrame eyebrow="EMAIL VERIFICATION" title={verified ? "Your email is verified" : "Verify your email"} description="Email verification is required before creating reports or submitting a claim.">
-    <ErrorNotice error={error} /><SuccessNotice>{message}</SuccessNotice>
-    <Panel className="auth-card"><p>{verified ? "You can now use your Reclaim reports and claims." : "Open the verification link in your email. After verifying, return to this tab and choose Refresh status to continue."}</p>
-      {session?.role === "user" && !verified && <div className="form-actions"><button className="button button-primary" type="button" onClick={resend} disabled={busy}>{busy ? "Please wait…" : "Resend verification email"}</button><button className="button button-secondary" type="button" onClick={refresh} disabled={busy}>Refresh status</button></div>}
-      {verified && <Link className="button button-primary" to={destination || "/my"}>{destination ? "Continue" : "Go to my workspace"}</Link>}
-      {!session && <div className="form-actions"><Link className="button button-primary" to={authPath("/login", destination)}>Sign in</Link><Link className="button button-secondary" to={authPath("/register", destination)}>Create account</Link></div>}
+    <ErrorNotice error={error} title="Email verification could not be completed" fields={{ code: { id: "verification-code", label: "Verification code" } }} focus /><SuccessNotice>{message}</SuccessNotice>
+    <Panel className="auth-card">
+      {verified ? <>
+        <p ref={success} tabIndex={-1} role="status">You can now use your Reclaim reports and claims.</p>
+        <Link className="button button-primary" to={destination || "/my"}>{destination ? "Continue" : "Go to My Reclaim"}</Link>
+      </> : session?.role === "user" ? <>
+        <p>Enter the six-digit code sent to your account email. Codes expire after 10 minutes. No email link is needed.</p>
+        <form onSubmit={submit} aria-busy={busy || undefined}>
+          <ResetCodeInput id="verification-code" label="Verification code" value={code} onChange={setCode} error={error?.errors?.code} disabled={busy} />
+          <button className="button button-primary auth-submit" type="submit" disabled={busy}>{busy ? "Please wait..." : "Verify email"}</button>
+        </form>
+        <div className="form-actions">
+          <button className="button button-secondary" type="button" onClick={resend} disabled={busy || remaining > 0}>Resend code</button>
+          <button className="button button-secondary" type="button" onClick={refresh} disabled={busy}>Refresh status</button>
+        </div>
+        {remaining > 0 && <p>You can resend in {remaining} seconds.</p>}
+        <p className="muted-copy">Check spam if the code has not arrived. Use the newest code. If you already used a verification link, choose Refresh status.</p>
+      </> : !session ? <>
+        <p>Sign in to the account you registered, then enter the code from your email here.</p>
+        <div className="form-actions"><Link className="button button-primary" to={authPath("/login", "/verify-email" + (destination ? "?returnTo=" + encodeURIComponent(destination) : ""))}>Sign in to enter your code</Link><Link className="button button-secondary" to={authPath("/register", destination)}>Create account</Link></div>
+      </> : <p>Your staff account does not require this verification form.</p>}
     </Panel>
   </AuthFrame>;
 }

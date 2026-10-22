@@ -48,6 +48,7 @@ const messages = Object.assign(Object.create(null), {
 });
 
 const validationMessages = Object.assign(Object.create(null), {
+  "This verification code is incorrect, expired, or no longer valid. Request another code.": "This verification code is incorrect, expired, or no longer valid. Request another code.",
   "Your password-reset session is invalid or has expired. Request another code.": "Your password-reset session is invalid or has expired. Request another code.",
   "Enter the six-digit code from your email.": "Enter the six-digit code from your email.",
   "This reset code is incorrect, expired, or no longer valid. Request another code.": "This reset code is incorrect, expired, or no longer valid. Request another code.",
@@ -103,7 +104,7 @@ export function failureDetails(status, payload, { path = "", method = "GET", ret
   const accountCreated = status === 503 && path === "auth/register" && payload?.code === "account_created_email_failed" && payload?.account_created === true;
   const mailFailure = status === 503 && original === "We couldn't send the account email. Try again shortly. If you just registered, sign in to request a new verification email.";
   const inactive = status === 403 && original === "This account is inactive.";
-  const protectedAuth = ["auth/logout", "auth/password", "auth/email/verification-notification"].includes(path);
+  const protectedAuth = ["auth/logout", "auth/password", "auth/email/verification-notification", "auth/email/verify-code"].includes(path);
   const expired = status === 419 || (status === 401 && (protectedAuth || !String(path).startsWith("auth/")));
   let message;
   if (expired) message = SESSION_MESSAGE;
