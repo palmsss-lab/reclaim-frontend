@@ -14,6 +14,7 @@
 body:has(.form-dialog[open]) { overflow: hidden; }
 .form-dialog-card { display: flex; max-height: min(88dvh, 52rem); flex-direction: column; }
 .form-dialog-header { position: sticky; z-index: 1; top: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--surface); }
+.form-dialog-header > div { min-width: 0; overflow-wrap: anywhere; }
 .form-dialog-header h2 { margin: 0; padding-block: .3rem; font-size: 1.25rem; line-height: 1.35; }
 .form-dialog-header p { margin: .35rem 0 0; max-width: 60ch; color: var(--muted); line-height: 1.5; }
 .form-dialog-close { display: grid; min-width: 2.75rem; min-height: 2.75rem; flex: 0 0 auto; place-items: center; margin: -.35rem -.55rem 0 0; border: 0; border-radius: var(--radius-control); color: var(--navy); background: transparent; cursor: pointer; }

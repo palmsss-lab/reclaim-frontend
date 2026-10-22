@@ -62,11 +62,11 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
     onClose();
   }
 
-  function markDirty() { dirtyRef.current = true; }
+  function markDirty(event) { if (event.target.closest("dialog") === dialogRef.current) dirtyRef.current = true; }
 
   return <dialog ref={dialogRef} className={`form-dialog ${className}`} aria-labelledby={titleId}
-    onKeyDown={event => trapDialogFocus(event, dialogRef.current)}
-    onCancel={(event) => { event.preventDefault(); requestClose(); }}
+    onKeyDown={event => { if (event.target.closest("dialog") === dialogRef.current) trapDialogFocus(event, dialogRef.current); }}
+    onCancel={(event) => { if (event.target === dialogRef.current) { event.preventDefault(); requestClose(); } }}
     onClick={(event) => { if (event.target === dialogRef.current) requestClose(); }}>
     <div className="form-dialog-card">
       <header className="form-dialog-header">

@@ -29,3 +29,10 @@
 @media (max-width: 480px) { .user-activity-row > .user-status { flex-basis: 100%; } }
 
 .user-claims-panel td { vertical-align: top; }
+
+/* Report details and actions need the whole card width on small screens. */
+@media (max-width: 760px) {
+  .user-reports-panel .table-scroll-mobile-cards td { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .user-reports-panel .inline-actions > * { flex: 1 1 auto; }
+  .user-reports-panel .report-images > .button { width: 100%; }
+}

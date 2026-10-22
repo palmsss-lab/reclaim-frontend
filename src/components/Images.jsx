@@ -135,7 +135,9 @@ export function ReportImages({ report, kind }) {
   const readOnly = report.status !== (kind === "finder" ? "PENDING" : "OPEN");
   const [open, setOpen] = useState(false);
   const button = useRef(null);
-  return <div><button ref={button} type="button" className="button button-secondary button-small" aria-expanded={open} onClick={() => setOpen(!open)}>{open ? "Close photos" : readOnly ? "View photos" : "Manage photos"} for report #{report.report_id}</button>
-    {open && <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} />}
+  return <div className="report-images"><button ref={button} type="button" className="button button-secondary button-small" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{readOnly ? "View photos" : "Manage photos"} for report #{report.report_id}</button>
+    <FormDialog className="report-images-dialog" open={open} title={"Photos for report #" + report.report_id} closeLabel="Close report photos" returnFocusRef={button} onClose={() => setOpen(false)}>
+      <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} />
+    </FormDialog>
   </div>;
 }

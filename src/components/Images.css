@@ -45,3 +45,15 @@
 .claim-proof-dialog .form-dialog-body { display: grid; place-items: center; }
 .claim-proof-dialog .item-photograph { width: auto; height: auto; max-width: 100%; max-height: min(36rem, calc(88dvh - 10rem)); object-fit: contain; }
 @media (max-width: 600px) { .claim-proof-dialog { width: calc(100% - 1rem); } }
+
+/* Keep private report photos out of the table's narrow image column. */
+.report-images { min-width: 0; }
+.report-images > .button { max-width: 100%; white-space: normal; }
+.report-images-dialog { width: min(calc(100% - 2rem), 48rem); }
+.report-images-dialog .form-dialog-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+.report-images-dialog .images-panel .panel-heading { margin-bottom: 16px; }
+@media (max-width: 600px) {
+  .report-images-dialog { width: calc(100% - 1rem); }
+  .report-images-dialog .image-controls > *, .report-images-dialog .images-panel > .button,
+  .draft-image > .button { width: 100%; }
+}
