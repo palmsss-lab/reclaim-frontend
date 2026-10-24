@@ -1,4 +1,5 @@
 import { useSuccessToast } from "../components/Toast";
+import PossibleMatchForm from "../components/PossibleMatchForm";
 import { FoundItemFields, WorkflowField, WorkflowForm, foundItemTargets } from "../components/WorkflowForm";
 import { useConfirm } from "../components/Confirmation";
 import { DraftImage, useRecordImage } from "../components/DraftImage";
@@ -206,6 +207,7 @@ export function MissingReportDetailPage() {
       <ImageManager path={"staff/missing-reports/" + reportId + "/images"} readOnly />
       <Panel title="Private report details"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Category</dt><dd>{report.category_name || "Not selected"}</dd></div><div><dt>Last-known location</dt><dd>{report.last_known_location}</dd></div><div><dt>Last seen</dt><dd>{formatDate(report.lost_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter contact</dt><dd>{report.reporter_contact}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Status</dt><dd><StatusBadge value={report.status} /></dd></div><div><dt>Previously reviewed</dt><dd>{report.reviewer_name ? report.reviewer_name + " · " + formatDate(report.reviewed_at, { time: true }) : "No"}</dd></div></dl>
         {!report.reviewed_at && report.status !== "WITHDRAWN" && <div className="form-actions"><button className="button button-primary" type="button" disabled={busy} onClick={review}>{busy ? "Recording review…" : "Record review"}</button></div>}
+        {report.status === "OPEN" && <div className="form-actions"><PossibleMatchForm reportId={report.report_id} onSent={resource.reload} /></div>}
       </Panel>
     </>}
   </>;

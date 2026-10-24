@@ -1,4 +1,5 @@
 import { UserStatus } from "../components/UserStatus";
+import NotificationTarget from "../components/NotificationTarget";
 import { useSuccessToast } from "../components/Toast";
 import { FoundItemFields, WorkflowForm, foundItemTargets } from "../components/WorkflowForm";
 import { useConfirm } from "../components/Confirmation";
@@ -102,6 +103,7 @@ export function FinderReportsPage() {
     <PageHeading title="My found-item reports" description="Report something you found, then hand it to staff. Your report stays private; staff decide when to publish the received item." action={<button className="button button-primary" type="button" onClick={() => setShowForm(true)}>Report found item</button>} />
     <FormDialog discardLabel="Discard changes" open={showForm} title="Report an item you found" description="This creates a private found-item report. Staff will record handover before it becomes a stored item." onClose={() => { setShowForm(false); setPageNumber(1); resource.reload(); }}><FinderReportForm onPartial={() => { setShowForm(false); setPageNumber(1); resource.reload(); }} onCreated={(report) => { setShowForm(false); notify("Found-item report submitted.", "finder-" + report.report_id); resource.reload(); }} /></FormDialog>
     <ErrorNotice error={actionError} />
+    <NotificationTarget kind="finder-reports" />
     <Panel className="user-reports-panel" title="Your found-item reports" description="Only reports submitted by your account are shown here.">
       {resource.loading ? <LoadingState label="Loading found-item reports…" /> : resource.error ? <ErrorNotice error={resource.error} /> : <DataTable mobileCards caption="Your found-item reports" rows={resource.rows} rowKey={(row) => row.report_id} emptyTitle="No found-item reports yet" emptyText="Use Report found item to send your first report." columns={[
         { key: "images", label: "Images", render: (row) => <ReportImages report={row} kind="finder" /> },
@@ -173,6 +175,7 @@ export function MissingReportsPage() {
     <PageHeading title="My missing items" description="Report what you lost and where you last saw it. Only you and staff can see these details. Mark your report resolved when you find the item." action={<button className="button button-primary" type="button" onClick={() => { setEditing(null); setShowForm(true); }}>Report missing item</button>} />
     <FormDialog discardLabel="Discard changes" open={showForm} title={editing ? "Edit missing-item report" : "Report a missing item"} description="Details stay private to you and authorized staff." onClose={() => { setShowForm(false); setEditing(null); resource.reload(); }}><MissingReportForm onPartial={() => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); resource.reload(); }} key={editing?.report_id || "new"} report={editing} onSaved={(row) => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); notify(editing ? "Missing-item report updated." : "Missing-item report submitted.", editing ? undefined : "missing-create-" + row.report_id); resource.reload(); }} /></FormDialog>
     <ErrorNotice error={actionError} />
+    <NotificationTarget kind="missing-reports" />
     <Panel className="user-reports-panel" title="Your missing-item reports">
       <StatusTabs label="Missing report state" options={[{ value: "OPEN", label: "Still Missing" }, { value: "RESOLVED", label: "Resolved" }, { value: "WITHDRAWN", label: "Withdrawn" }]} value={status} counts={resource.payload?.tabCounts} onChange={value => { setStatus(value); setPageNumber(1); }}>
       <p className="muted-copy">Resolving your report does not return a stored item or change an ownership claim.</p>
@@ -195,6 +198,7 @@ export function ClaimsPage() {
   const resource = useApiResource("my-claims-" + pageNumber, () => api("my/claims", { query: { per_page: 20, page: pageNumber } }));
   return <>
     <PageHeading eyebrow="OWNERSHIP CLAIMS" title="My claims" description="Follow the status of claims you submitted. Evidence is visible only to you and authorized staff." action={<Link className="button button-secondary" to="/">Browse found items</Link>} />
+    <NotificationTarget kind="claims" />
     <Panel className="user-claims-panel" title="Your ownership claims">
       {resource.loading ? <LoadingState label="Loading your claims…" /> : resource.error ? <ErrorNotice error={resource.error} /> : <DataTable mobileCards caption="Your ownership claims" rows={resource.rows} rowKey={(row) => row.item_id} emptyTitle="No ownership claims yet" emptyText="Browse public items and describe proof of ownership to submit a claim." columns={[
         { key: "public_description", label: "Item", render: (row) => <div><strong>{row.public_description || row.category_name || ("Item #" + row.item_id)}</strong><small className="table-subline">Reference #{row.item_id}</small></div> },

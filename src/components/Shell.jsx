@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
 import { useAuth } from "../auth/AuthContext";
 import Brand from "./Brand";
 import AccountMenu from "./AccountMenu";
+import UserNotifications from "./UserNotifications";
 import { ErrorNotice } from "./ui";
 import { FormDialog } from "./FormDialog";
 import "./Shell.css";
@@ -65,6 +66,7 @@ function SiteHeader({ staff = false, headerRef }) {
     <MainNavigation staff={staff} />
     <MobileNavigation staff={staff} />
     <div className="account-menu">
+      {!staff && session?.role === "user" && <UserNotifications />}
       {session ? <AccountMenu onSignOut={signOut} signingOut={signingOut} /> : <Link className="button button-primary" to="/login">Sign in</Link>}
     </div>
   </div>{logoutError && <div className="logout-error"><ErrorNotice error={logoutError} title="Sign out failed. Please try again." focus /></div>}</header>;
