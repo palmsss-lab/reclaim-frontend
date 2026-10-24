@@ -62,6 +62,7 @@ test('cancelled consent, closed popup, blocked popup and unavailable configurati
   }
 });
 test('setup proof survives authentication remount in memory and clears after setup', () => {
-  clearSetupProof(); assert.equal(readSetupProof('?token=fictional-proof'), 'fictional-proof');
-  assert.equal(readSetupProof(''), 'fictional-proof'); clearSetupProof(); assert.equal(readSetupProof(''), '');
+  const proof = 'a'.repeat(64);
+  clearSetupProof(); assert.equal(readSetupProof(`?token=${proof}`), proof);
+  assert.equal(readSetupProof(''), proof); clearSetupProof(); assert.equal(readSetupProof(''), '');
 });

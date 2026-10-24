@@ -12,6 +12,7 @@ import { StaffDashboardPage, FinderQueuePage, FinderReportDetailPage, MissingQue
 import { ItemListPage, ItemDetailPage, StaffClaimsPage, StaffReportsPage } from "./pages/StaffInventoryPages";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import StaffProfilePage from "./pages/StaffProfilePage";
+import StaffPeoplePage from "./pages/StaffPeoplePage";
 import { AccountsPage, AccountDetailPage, ReferenceDataPage } from "./pages/AdminPages";
 import "./styles.css";
 import { ConfirmationProvider } from "./components/Confirmation";
@@ -116,6 +117,7 @@ function AppRoutes() {
           <Route path="/staff/reports" element={<StaffReportsPage />} />
           <Route path="/staff/security" element={<ChangePasswordPage />} />
           <Route path="/staff/profile" element={<StaffProfilePage />} />
+          <Route path="/staff/people" element={<StaffPeoplePage />} />
           <Route path="/staff/reference-data" element={<ReferenceDataPage />} />
           <Route element={<RouteGate roles={["staff"]} admin />}>
             <Route path="/admin/accounts" element={<AccountsPage />} />

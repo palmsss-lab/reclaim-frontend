@@ -1,3 +1,6 @@
+import ReferenceSelect, { referenceReady, useReferenceList } from "../components/ReferenceSelect";
+import WalkInClaim from "../components/WalkInClaim";
+import StaffStatus from "../components/StaffStatus";
 import { useSuccessToast } from "../components/Toast";
 import { useConfirm } from "../components/Confirmation";
 import { ImageManager } from "../components/Images";
@@ -7,20 +10,11 @@ import { useEffect, useRef, useState } from "react";
 import { StatusTabs } from "../components/StatusTabs";
 import { statusPages } from "../api/statusPages";
 import { Link, useLocation, useParams, useSearchParams } from "react-router";
-import { api, allPages, pageInfo } from "../api/client";
-import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, StatusBadge, formatDate, useApiResource } from "../components/ui";
+import { api, pageInfo } from "../api/client";
+import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, formatDate, useApiResource } from "../components/ui";
 import "./StaffInventoryPages.css";
 import { reviewContext } from "../navigation/reviewContext";
 
-function StaffReferenceOptions() {
-  return useApiResource("staff-inventory-references", async () => {
-    const [categories, locations] = await Promise.all([
-      allPages("categories"),
-      allPages("storage-locations"),
-    ]);
-    return { categories: categories.data || [], locations: locations.data || [] };
-  });
-}
 
 export function ItemListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -33,7 +27,8 @@ export function ItemListPage() {
   const filtersActive = fields.some(key => Boolean(applied[key]));
   useEffect(() => { setFilters(Object.fromEntries(fields.map(key => [key, searchParams.get(key) || ""]))); }, [searchKey]);
   function setPageNumber(page) { setSearchParams({ ...applied, status, page: String(page) }); }
-  const refs = StaffReferenceOptions();
+  const categories = useReferenceList("categories");
+  const locations = useReferenceList("storage-locations");
   const resource = useApiResource("staff-items-" + searchKey, () => statusPages("items", {
     query: { ...applied, location_scope: "history" }, statuses: ["stored", "returned"], active: status, page: pageNumber,
   }));
@@ -45,14 +40,14 @@ export function ItemListPage() {
       <p className="muted-copy">Items remain in storage until staff completes a return, including items with pending or rejected claims. Counts include all items matching these filters.</p>
       <form className="inventory-filter-form" aria-describedby="inventory-filter-help" onSubmit={(event) => { event.preventDefault(); setSearchParams({ ...filters, status, page: "1" }); }}>
         <Field label="Search items" name="item-search" error={resource.error?.errors?.q}><input id="item-search" type="search" placeholder="Item description…" value={filters.q} onChange={(event) => setFilters({ ...filters, q: event.target.value })} /></Field>
-        <Field label="Category" name="item-category" error={resource.error?.errors?.category_id}><select id="item-category" value={filters.category_id} onChange={(event) => setFilters({ ...filters, category_id: event.target.value })}><option value="">All categories</option>{refs.payload?.categories?.map((row) => <option key={row.category_id} value={row.category_id}>{row.category_name}</option>)}</select></Field>
-        <Field label="Storage location" name="item-location" error={resource.error?.errors?.location_id}><select id="item-location" value={filters.location_id} onChange={(event) => setFilters({ ...filters, location_id: event.target.value })}><option value="">All locations</option>{refs.payload?.locations?.map((row) => <option key={row.location_id} value={row.location_id}>{row.location_code}</option>)}</select></Field>
+        <ReferenceSelect resource={categories} required={false} label="Category" id="item-category" value={filters.category_id} onChange={event => setFilters({ ...filters, category_id: event.target.value })} fieldError={resource.error?.errors?.category_id} rowKey="category_id" optionLabel={row => row.category_name} placeholder="All categories" emptyText="No categories are available." />
+        <ReferenceSelect resource={locations} required={false} label="Storage location" id="item-location" value={filters.location_id} onChange={event => setFilters({ ...filters, location_id: event.target.value })} fieldError={resource.error?.errors?.location_id} rowKey="location_id" optionLabel={row => row.location_code} placeholder="All locations" emptyText="No storage locations are available." />
         <Field label="Received from" name="item-received-from" error={resource.error?.errors?.received_from}><input id="item-received-from" type="date" value={filters.received_from} onChange={(event) => setFilters({ ...filters, received_from: event.target.value })} /></Field>
         <Field label="Received through" name="item-received-to" error={resource.error?.errors?.received_to}><input id="item-received-to" type="date" value={filters.received_to} onChange={(event) => setFilters({ ...filters, received_to: event.target.value })} /></Field>
         <button className="button button-secondary" type="submit">Apply filters</button>
       </form>
       <p id="inventory-filter-help" className="inventory-filter-help">Storage location matches current and previous placements. Receipt dates include both endpoints.</p>
-      {refs.error && <ErrorNotice error={refs.error} title="Categories and storage locations could not be loaded" />}
+
       {resource.loading ? <LoadingState label="Loading item inventory…" /> : resource.error ? <ErrorNotice error={resource.error} fields={{ q: { id: "item-search", label: "Search items" }, category_id: { id: "item-category", label: "Category" }, location_id: { id: "item-location", label: "Storage location" }, received_from: { id: "item-received-from", label: "Received from" }, received_to: { id: "item-received-to", label: "Received through" } }} focus={resource.error.status === 422} /> : <DataTable caption="Staff item inventory" rows={resource.rows} rowKey={(row) => row.item_id} emptyTitle={filtersActive ? "No items match" : status === "returned" ? "No returned items yet" : "No items in storage"} emptyText={filtersActive ? "Try a different search or clear the filters." : status === "returned" ? "Items appear here after staff completes a return." : "Received items will appear here while they are in storage."} emptyAction={filtersActive ? <button type="button" className="button button-secondary" onClick={() => setSearchParams({ status, page: "1" })}>Clear filters</button> : undefined} columns={[
         { key: "item_description", label: "Item", render: (row) => <strong>{row.item_description}</strong> },
         { key: "category_name", label: "Category" },
@@ -88,7 +83,7 @@ export function ItemDetailPage() {
   const [busyAction, setBusyAction] = useState("");
   const [publishOpen, setPublishOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
-  const refs = StaffReferenceOptions();
+  const locations = useReferenceList("storage-locations");
   const resource = useApiResource("staff-item-detail-" + itemId, async () => {
     const itemResponse = await api("items/" + itemId);
     const listing = await api("public/items/" + itemId).catch((error) => { if (error.status === 404) return null; throw error; });
@@ -169,12 +164,13 @@ export function ItemDetailPage() {
           </form></FormDialog></>}
         </Panel>
         <Panel title="Transfer storage" description="A transfer creates a new assignment and retains previous history.">
-          {item.is_returned || !item.current_assignment ? <p className="muted-copy">This item has no open assignment to transfer.</p> : <><button className="button button-secondary" type="button" onClick={() => setTransferOpen(true)}>Transfer storage</button><FormDialog discardLabel="Discard changes" open={transferOpen} title="Transfer storage" onClose={() => { setTransferOpen(false); setTransferLocation(""); setActionError(null); }}><form onSubmit={transfer} aria-busy={busyAction === "transfer" || undefined}><ErrorNotice error={actionError} focus fields={{ location_id: { id: "transfer-location", label: "New storage location" } }} /><Field label="New storage location" name="transfer-location" error={actionError?.errors?.location_id}><select id="transfer-location" value={transferLocation} onChange={(event) => setTransferLocation(event.target.value)} required><option value="">Select a location</option>{refs.payload?.locations?.map((row) => <option key={row.location_id} value={row.location_id}>{row.location_code} · {row.location_description}</option>)}</select></Field><div className="form-actions"><button className="button button-secondary" type="submit" disabled={Boolean(busyAction) || refs.loading}>{busyAction === "transfer" ? "Transferring…" : "Record transfer"}</button></div></form></FormDialog></>}
+          {item.is_returned || !item.current_assignment ? <p className="muted-copy">This item has no open assignment to transfer.</p> : <><button className="button button-secondary" type="button" onClick={() => setTransferOpen(true)}>Transfer storage</button><FormDialog discardLabel="Discard changes" open={transferOpen} title="Transfer storage" onClose={() => { setTransferOpen(false); setTransferLocation(""); setActionError(null); }}><form onSubmit={transfer} aria-busy={busyAction === "transfer" || undefined}><ErrorNotice error={actionError} focus fields={{ location_id: { id: "transfer-location", label: "New storage location" } }} /><ReferenceSelect resource={locations} label="New storage location" id="transfer-location" value={transferLocation} onChange={event => setTransferLocation(event.target.value)} fieldError={actionError?.errors?.location_id} rowKey="location_id" excludeId={item.current_location?.location_id} optionLabel={row => row.location_code + " · " + row.location_description} placeholder="Select a location" emptyText="No other storage locations are available. Add a different location in Categories and storage." /><div className="form-actions"><button className="button button-secondary" type="submit" disabled={Boolean(busyAction) || !referenceReady(locations) || !transferLocation}>{busyAction === "transfer" ? "Transferring…" : "Record transfer"}</button></div></form></FormDialog></>}
         </Panel>
       </div>
     </div>
     <ImageManager path={"items/" + itemId + "/images"} publication readOnly={item.is_returned || !item.current_assignment} />
     <Panel className="inventory-lower-panel staff-claims-panel" title="Ownership claims" description="Claim evidence and claimant contacts are visible only to authorized staff.">
+      <div className="form-actions"><WalkInClaim itemId={itemId} disabled={Boolean(busyAction) || resource.loading || item.is_returned || !item.current_assignment} onCreated={() => { resource.reload(); claimsResource.reload(); }} /></div>
       <ErrorNotice error={claimsResource.error} retry={false} />
       {claimsResource.error && <button className="button button-secondary" type="button" onClick={claimsResource.reload}>Retry claims</button>}
       {claimsResource.loading && !claimsResource.payload ? <LoadingState label="Loading item claims…" /> : !claimsResource.error && <>
@@ -184,7 +180,7 @@ export function ItemDetailPage() {
         { key: "claimant", label: "Claimant", render: (claim) => <div><strong>{claim.claimant?.full_name}</strong>{String(claim.claimant_id) === selectedClaimant && <span className="selected-claim-label">Selected claim</span>}<small className="table-subline">{claim.claimant?.contact_details}</small></div> },
         { key: "evidence_text", label: "Evidence", render: (claim) => <OwnershipEvidence claim={claim} item={item} /> },
         { key: "submitted_at", label: "Submitted", render: (claim) => formatDate(claim.submitted_at, { time: true }) },
-        { key: "outcome", label: "Outcome", render: (claim) => <StatusBadge value={claim.outcome} /> },
+        { key: "outcome", label: "Outcome", render: (claim) => <StaffStatus value={claim.outcome} /> },
         { key: "reviewer", label: "Reviewed by", render: (claim) => claim.reviewer?.full_name ? claim.reviewer.full_name + " · " + formatDate(claim.reviewed_at) : "—" },
         { key: "actions", label: "Actions", render: (claim) => claim.outcome === "PENDING" ? <div className="claim-decision"><strong>{claim.claimant?.full_name}</strong><div className="inline-actions"><button className="button button-secondary button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading} onClick={() => reviewClaim(claim, "reject")}>Reject</button><button className="button button-primary button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading || item.is_returned} onClick={() => reviewClaim(claim, "return")}>Return item</button></div></div> : "—" },
       ]} />
@@ -234,47 +230,46 @@ export function StaffReportsPage() {
   const [filters, setFilters] = useState({ category_id: "", location_id: "", received_from: "", received_to: "" });
   const [applied, setApplied] = useState(filters);
   const [reportPages, setReportPages] = useState({ pending: 1, rates: 1, occupancy: 1, intake: 1 });
-  const refs = StaffReferenceOptions();
-  const key = JSON.stringify({ ...applied, reportPages });
-  const resource = useApiResource("staff-reports-" + key, async () => {
-    const dates = { received_from: applied.received_from || undefined, received_to: applied.received_to || undefined };
-    const category = { category_id: applied.category_id || undefined };
-    const [pending, rates, occupancy, intake] = await Promise.all([
-      api("reports/pending-claims", { query: { ...category, ...dates, per_page: 20, page: reportPages.pending } }),
-      api("reports/return-rates", { query: { ...category, ...dates, per_page: 20, page: reportPages.rates } }),
-      api("reports/storage-occupancy", { query: { location_id: applied.location_id || undefined, per_page: 20, page: reportPages.occupancy } }),
-      api("reports/monthly-intake", { query: { ...category, ...dates, per_page: 20, page: reportPages.intake } }),
-    ]);
-    return { pending, rates, occupancy, intake };
-  });
-  const data = resource.payload;
+  const categories = useReferenceList("categories");
+  const locations = useReferenceList("storage-locations");
+  const dates = { received_from: applied.received_from || undefined, received_to: applied.received_to || undefined };
+  const category = { category_id: applied.category_id || undefined };
+  const pendingQuery = { ...category, ...dates, per_page: 20, page: reportPages.pending };
+  const ratesQuery = { ...category, ...dates, per_page: 20, page: reportPages.rates };
+  const occupancyQuery = { location_id: applied.location_id || undefined, per_page: 20, page: reportPages.occupancy };
+  const intakeQuery = { ...category, ...dates, per_page: 20, page: reportPages.intake };
+  const pending = useApiResource("report-pending-" + JSON.stringify(pendingQuery), () => api("reports/pending-claims", { query: pendingQuery }));
+  const rates = useApiResource("report-rates-" + JSON.stringify(ratesQuery), () => api("reports/return-rates", { query: ratesQuery }));
+  const occupancy = useApiResource("report-occupancy-" + JSON.stringify(occupancyQuery), () => api("reports/storage-occupancy", { query: occupancyQuery }));
+  const intake = useApiResource("report-intake-" + JSON.stringify(intakeQuery), () => api("reports/monthly-intake", { query: intakeQuery }));
+  const resource = { error: [pending, rates, occupancy, intake].find(report => report.error)?.error };
   const reportFiltersActive = Boolean(applied.category_id || applied.received_from || applied.received_to);
   const clearReportFilters = <button type="button" className="button button-secondary" onClick={() => { const cleared = { category_id: "", location_id: "", received_from: "", received_to: "" }; setFilters(cleared); setApplied(cleared); setReportPages({ pending: 1, rates: 1, occupancy: 1, intake: 1 }); }}>Clear report filters</button>;
   return <>
     <PageHeading eyebrow="OPERATIONS" title="Reports" description="View pending claims, return rates, current storage occupancy, and monthly intake from current records." />
     <Panel className="report-filter-panel" title="Report filters"><form className="report-filter-form" onSubmit={(event) => { event.preventDefault(); setReportPages({ pending: 1, rates: 1, occupancy: 1, intake: 1 }); setApplied(filters); }}>
-      <Field label="Category" name="report-category" error={resource.error?.errors?.category_id}><select id="report-category" value={filters.category_id} onChange={(event) => setFilters({ ...filters, category_id: event.target.value })}><option value="">All categories</option>{refs.payload?.categories?.map((row) => <option key={row.category_id} value={row.category_id}>{row.category_name}</option>)}</select></Field>
-      <Field label="Location (occupancy)" name="report-location" error={resource.error?.errors?.location_id}><select id="report-location" value={filters.location_id} onChange={(event) => setFilters({ ...filters, location_id: event.target.value })}><option value="">All locations</option>{refs.payload?.locations?.map((row) => <option key={row.location_id} value={row.location_id}>{row.location_code}</option>)}</select></Field>
+      <ReferenceSelect resource={categories} required={false} label="Category" id="report-category" value={filters.category_id} onChange={event => setFilters({ ...filters, category_id: event.target.value })} fieldError={resource.error?.errors?.category_id} rowKey="category_id" optionLabel={row => row.category_name} placeholder="All categories" emptyText="No categories are available." />
+      <ReferenceSelect resource={locations} required={false} label="Location (occupancy)" id="report-location" value={filters.location_id} onChange={event => setFilters({ ...filters, location_id: event.target.value })} fieldError={resource.error?.errors?.location_id} rowKey="location_id" optionLabel={row => row.location_code} placeholder="All locations" emptyText="No storage locations are available." />
       <Field label="Received from" name="report-from" error={resource.error?.errors?.received_from}><input id="report-from" type="date" value={filters.received_from} onChange={(event) => setFilters({ ...filters, received_from: event.target.value })} /></Field>
       <Field label="Received through" name="report-to" error={resource.error?.errors?.received_to}><input id="report-to" type="date" value={filters.received_to} onChange={(event) => setFilters({ ...filters, received_to: event.target.value })} /></Field>
       <button className="button button-secondary" type="submit">Run reports</button>
     </form></Panel>
-    {refs.error && <ErrorNotice error={refs.error} title="Categories and storage locations could not be loaded" />}
-    {resource.loading ? <LoadingState label="Loading staff reports…" /> : resource.error ? <ErrorNotice error={resource.error} fields={{ category_id: { id: "report-category", label: "Category" }, location_id: { id: "report-location", label: "Location" }, received_from: { id: "report-from", label: "Received from" }, received_to: { id: "report-to", label: "Received through" } }} focus={resource.error.status === 422} /> : data && <div className="staff-report-grid">
-      <Panel title="Pending claims"><DataTable caption="Pending claims report" rows={data.pending.data || []} rowKey={(row) => row.item_id + "-" + row.claimant_id} emptyTitle="No pending claims" emptyText={reportFiltersActive ? "No pending claims match the selected category and dates. Adjust the report filters to broaden the results." : "There are no claims awaiting review."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
+
+    <div className="staff-report-grid">
+      <Panel title="Pending claims">{pending.loading ? <LoadingState label="Loading pending claims…" /> : pending.error ? <ErrorNotice error={pending.error} /> : <><DataTable caption="Pending claims report" rows={pending.rows} rowKey={(row) => row.item_id + "-" + row.claimant_id} emptyTitle="No pending claims" emptyText={reportFiltersActive ? "No pending claims match the selected category and dates. Adjust the report filters to broaden the results." : "There are no claims awaiting review."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
         { key: "claimant", label: "Claimant", render: (row) => row.claimant?.full_name },
         { key: "item", label: "Item", render: (row) => row.item?.item_description },
         { key: "submitted_at", label: "Submitted", render: (row) => formatDate(row.submitted_at) },
-      ]} /><Pager page={pageInfo(data.pending)} onPage={(page) => setReportPages((current) => ({ ...current, pending: page }))} /></Panel>
-      <Panel title="Return rates"><DataTable caption="Return rates report" rows={data.rates.data || []} rowKey={(row) => row.category_id} emptyTitle="No return-rate data" emptyText={reportFiltersActive ? "No received items match the selected category and dates. Adjust the report filters to broaden the results." : "Return-rate information will appear after items have been received."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
+      ]} /><Pager page={pending.page} onPage={(page) => setReportPages((current) => ({ ...current, pending: page }))} /></>}</Panel>
+      <Panel title="Return rates">{rates.loading ? <LoadingState label="Loading return rates…" /> : rates.error ? <ErrorNotice error={rates.error} /> : <><DataTable caption="Return rates report" rows={rates.rows} rowKey={(row) => row.category_id} emptyTitle="No return-rate data" emptyText={reportFiltersActive ? "No received items match the selected category and dates. Adjust the report filters to broaden the results." : "Return-rate information will appear after items have been received."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
         { key: "category_name", label: "Category" }, { key: "received_items", label: "Received" }, { key: "returned_items", label: "Returned" }, { key: "return_rate_percent", label: "Return rate", render: (row) => row.return_rate_percent === null ? "—" : row.return_rate_percent + "%" },
-      ]} /><Pager page={pageInfo(data.rates)} onPage={(page) => setReportPages((current) => ({ ...current, rates: page }))} /></Panel>
-      <Panel title="Storage occupancy"><DataTable caption="Storage occupancy report" rows={data.occupancy.data || []} rowKey={(row) => row.location_id} emptyTitle="No storage locations found" emptyText={applied.location_id ? "No occupancy results for this location. Choose another location or select All locations." : "Add a storage location in Categories and storage to track occupancy."} emptyAction={applied.location_id ? clearReportFilters : undefined} columns={[
+      ]} /><Pager page={rates.page} onPage={(page) => setReportPages((current) => ({ ...current, rates: page }))} /></>}</Panel>
+      <Panel title="Storage occupancy">{occupancy.loading ? <LoadingState label="Loading storage occupancy…" /> : occupancy.error ? <ErrorNotice error={occupancy.error} /> : <><DataTable caption="Storage occupancy report" rows={occupancy.rows} rowKey={(row) => row.location_id} emptyTitle="No storage locations found" emptyText={applied.location_id ? "No occupancy results for this location. Choose another location or select All locations." : "Add a storage location in Categories and storage to track occupancy."} emptyAction={applied.location_id ? clearReportFilters : undefined} columns={[
         { key: "location_code", label: "Location" }, { key: "location_description", label: "Description" }, { key: "current_item_count", label: "Stored items" }, { key: "average_holding_days", label: "Avg. days", render: (row) => row.average_holding_days === null ? "—" : row.average_holding_days },
-      ]} /><Pager page={pageInfo(data.occupancy)} onPage={(page) => setReportPages((current) => ({ ...current, occupancy: page }))} /></Panel>
-      <Panel title="Monthly intake"><DataTable caption="Monthly intake report" rows={data.intake.data || []} rowKey={(row) => row.report_month} emptyTitle="No intake in this period" emptyText={reportFiltersActive ? "No items were received for the selected category and dates. Adjust the report filters to broaden the results." : "Monthly intake will appear here after items have been received."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
-        { key: "report_month", label: "Month" }, { key: "monthly_intake", label: "Received" }, { key: "running_total", label: "Running total" },
-      ]} /><Pager page={pageInfo(data.intake)} onPage={(page) => setReportPages((current) => ({ ...current, intake: page }))} /></Panel>
-    </div>}
+      ]} /><Pager page={occupancy.page} onPage={(page) => setReportPages((current) => ({ ...current, occupancy: page }))} /></>}</Panel>
+      <Panel title="Monthly intake"><p className="muted-copy">The running total includes receipts before the selected start date.</p>{intake.loading ? <LoadingState label="Loading monthly intake…" /> : intake.error ? <ErrorNotice error={intake.error} /> : <><DataTable caption="Monthly intake report" rows={intake.rows} rowKey={(row) => row.month} emptyTitle="No intake in this period" emptyText={reportFiltersActive ? "No items were received for the selected category and dates. Adjust the report filters to broaden the results." : "Monthly intake will appear here after items have been received."} emptyAction={reportFiltersActive ? clearReportFilters : undefined} columns={[
+        { key: "month", label: "Month" }, { key: "monthly_intake", label: "Received" }, { key: "running_total", label: "Running total" },
+      ]} /><Pager page={intake.page} onPage={(page) => setReportPages((current) => ({ ...current, intake: page }))} /></>}</Panel>
+    </div>
   </>;
 }

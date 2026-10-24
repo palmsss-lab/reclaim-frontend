@@ -23,11 +23,11 @@ export function foundItemTargets(prefix, categoryId, categoryLabel = "Category",
   };
 }
 
-export function FoundItemFields({ prefix, values, onChange, error, maxDateTime, category, passive = false }) {
+export function FoundItemFields({ prefix, values, onChange, error, maxDateTime, category, passive = false, timeHint }) {
   return <div className="workflow-grid">
     <WorkflowField wide label="Item description" name={prefix + "-description"} error={error?.errors?.item_description} hint="Include useful identifying details."><textarea id={prefix + "-description"} maxLength="16000" value={values.item_description} onChange={(event) => onChange({ ...values, item_description: event.target.value })} required /></WorkflowField>
     <div className="workflow-field-wide">{category}</div>
     <WorkflowField label={passive ? "Where was it found?" : "Where did you find it?"} name={prefix + "-place"} error={error?.errors?.found_place}><input id={prefix + "-place"} maxLength="200" value={values.found_place} onChange={(event) => onChange({ ...values, found_place: event.target.value })} required /></WorkflowField>
-    <WorkflowField label={passive ? "When was it found?" : "When did you find it?"} name={prefix + "-at"} error={error?.errors?.found_at}><input id={prefix + "-at"} type="datetime-local" max={maxDateTime} value={values.found_at} onChange={(event) => onChange({ ...values, found_at: event.target.value })} required /></WorkflowField>
+    <WorkflowField label={passive ? "When was it found?" : "When did you find it?"} name={prefix + "-at"} error={error?.errors?.found_at} hint={timeHint}><input id={prefix + "-at"} type="datetime-local" max={maxDateTime} value={values.found_at} onChange={(event) => onChange({ ...values, found_at: event.target.value })} required /></WorkflowField>
   </div>;
 }

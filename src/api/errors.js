@@ -4,6 +4,8 @@ import { knownField } from "../components/validation.js";
 
 export const SESSION_MESSAGE = "Please sign in again to continue.";
 const messages = Object.assign(Object.create(null), {
+  "Account holders must submit their own claims.": "Account holders must sign in and submit their own claims. Staff can record walk-in claims only.",
+  "Account profile details can only be updated by the account holder.": "Only the account holder can correct this profile. Staff can correct walk-in people only.",
   "The provided credentials are invalid.": "Your sign-in details are incorrect. Please try again.",
   "This account is inactive.": "This account is inactive. Contact Reclaim support for help.",
   "Verify your email address before using this feature.": "Verify your email before continuing. Open the verification link in your email or request a new one.",
@@ -110,7 +112,7 @@ export function failureDetails(status, payload, { path = "", method = "GET", ret
   if (expired) message = SESSION_MESSAGE;
   else if (accountCreated) message = "Your account was created, but the verification email could not be sent. Sign in and request a new verification email. Do not register again.";
   else if (mailFailure) message = original;
-  else if (status === 403) message = messages[original] && ["This account is inactive.", "Verify your email address before using this feature.", "The verification link is invalid."].includes(original) ? messages[original] : "You do not have access to this action. Return to your workspace or contact Reclaim support for help.";
+  else if (status === 403) message = messages[original] && ["Account holders must submit their own claims.", "Account profile details can only be updated by the account holder.", "This account is inactive.", "Verify your email address before using this feature.", "The verification link is invalid."].includes(original) ? messages[original] : "You do not have access to this action. Return to your workspace or contact Reclaim support for help.";
   else if (messages[original] && (status < 500 || (status === 503 && original === "Google sign-in is not configured. Use your existing sign-in method."))) message = messages[original];
   else if (status === 422) message = Object.keys(errors).length ? "Check the highlighted fields and try again." : "These details could not be accepted. Review the form and try again.";
   else if (status === 401) message = "Sign-in could not be completed. Check your details and try again.";

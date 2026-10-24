@@ -106,6 +106,7 @@ const staffNavGroups = [
   { label: "Inventory", links: [
     { to: "/staff/items", label: "Found items", end: true },
     { to: "/staff/items/new", label: "Receive item" },
+    { to: "/staff/people", label: "People" },
   ] },
 ];
 

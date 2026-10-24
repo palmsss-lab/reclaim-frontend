@@ -6,7 +6,7 @@ export function safeReturnPath(value, fallback = null) {
     if (decoded.startsWith("//") || /[\\\u0000-\u001f\u007f]/.test(decoded)) return fallback;
     const url = new URL(value, "https://reclaim.invalid");
     if (url.origin !== "https://reclaim.invalid") return fallback;
-    if (!/^\/(?:items\/[1-9]\d*|my(?:\/(?:finder-reports|missing-reports|claims))?|profile|change-password|verify-email|staff(?:\/(?:finder-reports(?:\/\d+)?|missing-reports(?:\/\d+)?|items(?:\/(?:new|\d+))?|claims|reports|security|profile|reference-data))?|admin\/accounts(?:\/\d+)?)$/.test(url.pathname)) return fallback;
+    if (!/^\/(?:items\/[1-9]\d*|my(?:\/(?:finder-reports|missing-reports|claims))?|profile|change-password|verify-email|staff(?:\/(?:finder-reports(?:\/\d+)?|missing-reports(?:\/\d+)?|items(?:\/(?:new|\d+))?|claims|reports|security|profile|people|reference-data))?|admin\/accounts(?:\/\d+)?)$/.test(url.pathname)) return fallback;
     return url.pathname + url.search + url.hash;
   } catch { return fallback; }
 }

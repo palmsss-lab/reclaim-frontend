@@ -78,7 +78,7 @@ export function ImageManager({ path, readOnly = false, publication = false, find
       setPrivacyNotice("");
       notify(message, message + "-" + (result?.data?.image_id ?? path)); setSelected(null); setReplacing(null);
       // Reload replacements even when the API's timestamp precision leaves updated_at unchanged.
-      if (finderReport) setPhotoRevision(value => value + 1);
+      setPhotoRevision(value => value + 1);
       if (input.current) input.current.value = "";
       resource.reload(); if (!uploadOpen) heading.current?.focus();
       return true;
@@ -110,7 +110,7 @@ export function ImageManager({ path, readOnly = false, publication = false, find
     {privacyNotice && <div className="notice notice-info" role="status">{privacyNotice}</div>}
     {resource.error && <button className="text-button" type="button" onClick={resource.reload}>Retry images</button>}
     {resource.loading && !resource.rows.length ? <LoadingState label="Loading images..." /> : <div className="image-manager-grid">{resource.rows.map((image, index) => <figure key={image.image_id}>
-      {finderReport ? <FinderReportPhoto path={path + "/" + image.image_id + "/content"} version={image.updated_at + ":" + photoRevision} index={index + 1} /> : <ImagePreview path={path + "/" + image.image_id + "/content"} version={image.updated_at} alt={(publication ? "Item photograph " : "Private item photograph ") + (index + 1)} />}
+      {finderReport ? <FinderReportPhoto path={path + "/" + image.image_id + "/content"} version={image.updated_at + ":" + photoRevision} index={index + 1} /> : <ImagePreview path={path + "/" + image.image_id + "/content"} version={image.updated_at + ":" + photoRevision} alt={(publication ? "Item photograph " : "Private item photograph ") + (index + 1)} />}
       <figcaption><span>Image {index + 1}</span>{publication && <span className="image-privacy-status">{image.approved ? "Approved for public display" : "Private"}</span>}</figcaption>
       {!readOnly && <div className="image-controls">
         {publication && <button className="button button-secondary button-small" type="button" disabled={busy} onClick={async () => { if (!image.approved && !await confirm("Approve this photo for public display? Confirm it contains no private evidence or contact details.", { confirmLabel: "Approve photo" })) return; mutate(() => api(path + "/" + image.image_id + "/publication", { method: "PUT", body: { approved: !image.approved } }), image.approved ? "Public approval removed." : "Image approved. It is public only while the item listing is available."); }}>{image.approved ? "Make image " + (index + 1) + " private" : "Approve image " + (index + 1) + " for public display"}</button>}

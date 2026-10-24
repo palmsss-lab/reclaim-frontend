@@ -1,6 +1,9 @@
+import ReferenceSelect, { referenceReady, useReferenceList } from "../components/ReferenceSelect";
+import StaffStatus, { staffStatusLabel } from "../components/StaffStatus";
+import { manilaDateTime as localDateTime, manilaInputTimestamp as apiDateTime } from "../api/dates";
 import { useSuccessToast } from "../components/Toast";
 import PossibleMatchForm from "../components/PossibleMatchForm";
-import { FoundItemFields, WorkflowField, WorkflowForm, foundItemTargets } from "../components/WorkflowForm";
+import { FoundItemFields, WorkflowForm, foundItemTargets } from "../components/WorkflowForm";
 import { useConfirm } from "../components/Confirmation";
 import { DraftImage, useRecordImage } from "../components/DraftImage";
 import { ImageManager } from "../components/Images";
@@ -11,30 +14,15 @@ import { Link, useLocation, useParams } from "react-router";
 import { useQueueFilters } from "../hooks/useQueueFilters";
 import { reviewContext } from "../navigation/reviewContext";
 import { api, allPages, pageInfo } from "../api/client";
-import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, StatusBadge, formatDate, useApiResource } from "../components/ui";
+import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, formatDate, useApiResource } from "../components/ui";
 import "./StaffPages.css";
 
-function localDateTime() {
-  const date = new Date();
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-function apiDateTime(value) { return value ? new Date(value).toISOString() : ""; }
 function ReportFilters({ values, onChange, onSubmit, statuses, error }) {
   return <form className="staff-filter-form" onSubmit={onSubmit}>
     <Field label="Search reports" name="report-search" error={error?.errors?.q}><input id="report-search" type="search" placeholder="Search description or reporter…" value={values.q} onChange={(event) => onChange({ ...values, q: event.target.value })} /></Field>
-    <Field label="Status" name="report-status" error={error?.errors?.status}><select id="report-status" value={values.status} onChange={(event) => onChange({ ...values, status: event.target.value })}><option value="">All statuses</option>{statuses.map((status) => <option key={status} value={status}>{status}</option>)}</select></Field>
+    <Field label="Status" name="report-status" error={error?.errors?.status}><select id="report-status" value={values.status} onChange={(event) => onChange({ ...values, status: event.target.value })}><option value="">All statuses</option>{statuses.map((status) => <option key={status} value={status}>{staffStatusLabel(status)}</option>)}</select></Field>
     <button className="button button-secondary" type="submit">Apply filters</button>
   </form>;
-}
-function ReferenceOptions() {
-  return useApiResource("staff-reference-options", async () => {
-    const [categories, locations, people] = await Promise.all([
-      allPages("categories"),
-      allPages("storage-locations"),
-      allPages("people"),
-    ]);
-    return { categories: categories.data || [], locations: locations.data || [], people: people.data || [] };
-  });
 }
 
 export function StaffDashboardPage() {
@@ -93,7 +81,7 @@ export function FinderQueuePage() {
         { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.reporter_name} · {row.reporter_email}</small></> },
         { key: "found_place", label: "Found place" },
         { key: "found_at", label: "Found", render: (row) => formatDate(row.found_at) },
-        { key: "status", label: "Status", render: (row) => <StatusBadge value={row.status} /> },
+        { key: "status", label: "Status", render: (row) => <StaffStatus value={row.status} /> },
         { key: "review", label: "Review", render: (row) => <Link to={"/staff/finder-reports/" + row.report_id} state={{ reviewFrom }}>Open report</Link> },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
@@ -107,7 +95,8 @@ export function FinderReportDetailPage() {
   const confirm = useConfirm();
   const { reportId } = useParams();
   const resource = useApiResource("staff-finder-report-" + reportId, () => api("staff/finder-reports/" + reportId), true);
-  const refs = ReferenceOptions();
+  const categories = useReferenceList("categories");
+  const locations = useReferenceList("storage-locations");
   const [values, setValues] = useState({ category_id: "", initial_location_id: "" });
   const [actionError, setActionError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -123,14 +112,17 @@ export function FinderReportDetailPage() {
     try {
       const result = await api("staff/finder-reports/" + reportId + "/receive", { method: "POST", body: { category_id: Number(values.category_id), initial_location_id: Number(values.initial_location_id) } });
       setSuccess(result?.data || result); notify("Handover recorded. Item received and stored.", "handover-" + reportId); setHandoverOpen(false); resource.reload();
-    } catch (error) { setActionError(error); }
+    } catch (error) {
+      if (error.status === 409) { setHandoverOpen(false); setClosureError(error); resource.reload(); }
+      else setActionError(error);
+    }
     finally { setBusy(false); }
   }
   async function closeReport() {
     if (!await confirm("Close this finder report? A closed report cannot be reopened.", { confirmLabel: "Close report", danger: true })) return;
     setBusy(true); setSuccess(null);
     try { await api("staff/finder-reports/" + reportId + "/close", { method: "POST", body: {} }); setClosureError(null); notify("Found-item report closed."); resource.reload(); }
-    catch (error) { setClosureError(error); }
+    catch (error) { setClosureError(error); if (error.status === 409) resource.reload(); }
     finally { setBusy(false); }
   }
 
@@ -140,22 +132,22 @@ export function FinderReportDetailPage() {
       <p><a href="#handover-actions" onClick={event => { event.preventDefault(); document.getElementById("handover-actions")?.focus(); }}>Go to handover actions</a></p>
       <div className="staff-detail-grid">
         <ImageManager path={"staff/finder-reports/" + reportId + "/images"} readOnly />
-        <Panel title="Reported item"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Found place</dt><dd>{report.found_place}</dd></div><div><dt>Found at</dt><dd>{formatDate(report.found_at, { time: true })}</dd></div><div><dt>Submitted</dt><dd>{formatDate(report.submitted_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Contact details</dt><dd>{report.reporter_contact}</dd></div><div><dt>Status</dt><dd><StatusBadge value={report.status} /></dd></div></dl></Panel>
+        <Panel title="Reported item"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Found place</dt><dd>{report.found_place}</dd></div><div><dt>Found at</dt><dd>{formatDate(report.found_at, { time: true })}</dd></div><div><dt>Submitted</dt><dd>{formatDate(report.submitted_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Contact details</dt><dd>{report.reporter_contact}</dd></div><div><dt>Status</dt><dd><StaffStatus value={report.status} /></dd></div></dl></Panel>
         <section id="handover-actions" tabIndex="-1" aria-label="Physical handover">
         <Panel title="Physical handover" description="Select the official category and where staff places the item.">
           <ErrorNotice error={closureError} focus onDismiss={() => setClosureError(null)} />
           <div className="inline-actions handover-actions">
-          {success?.item_id && <Link className="button button-secondary" to={"/staff/items/" + success.item_id}>Open received item</Link>}
-          <button className="button button-primary" type="button" aria-disabled={report.status !== "PENDING" || undefined} onClick={() => { if (report.status === "PENDING") setHandoverOpen(true); }}>{report.status === "RECEIVED" ? "Handover recorded" : "Record physical handover"}</button>
-          {report.status === "PENDING" && <button className="button button-secondary" type="button" disabled={busy} onClick={closeReport}>{busy ? "Closing report…" : "Close report"}</button>}
+          {(report.received_item_id || success?.item_id) && <Link className="button button-secondary" to={"/staff/items/" + (report.received_item_id || success.item_id)}>Open received item</Link>}
+          <button className="button button-primary" type="button" disabled={busy || resource.loading} aria-disabled={report.status !== "PENDING" || undefined} onClick={() => { if (report.status === "PENDING") setHandoverOpen(true); }}>{report.status === "RECEIVED" ? "Handover recorded" : "Record physical handover"}</button>
+          {report.status === "PENDING" && <button className="button button-secondary" type="button" disabled={busy || resource.loading} onClick={closeReport}>{busy ? "Closing report…" : "Close report"}</button>}
           </div>
-          <FormDialog open={handoverOpen && report.status === "PENDING"} discardLabel="Discard changes" title="Record physical handover" description="Select the official category and initial storage location for the received item." onClose={() => { setHandoverOpen(false); setValues({ category_id: "", initial_location_id: "" }); setActionError(null); }}><WorkflowForm onSubmit={receive} validationTitle="Check the form" failureTitle="Couldn't receive the item" busy={busy} error={actionError} fields={{ category_id: { id: "handover-category", label: "Official category" }, initial_location_id: { id: "handover-location", label: "Initial storage location" } }} actions={<button className="button button-primary" type="submit" disabled={busy || refs.loading}>{busy ? "Recording handover…" : "Record physical handover"}</button>}>
-            <WorkflowField label="Official category" name="handover-category" error={actionError?.errors?.category_id}><select id="handover-category" value={values.category_id} onChange={(event) => setValues({ ...values, category_id: event.target.value })} required><option value="">Select a category</option>{refs.payload?.categories?.map((row) => <option value={row.category_id} key={row.category_id}>{row.category_name}</option>)}</select></WorkflowField>
-            <WorkflowField label="Initial storage location" name="handover-location" error={actionError?.errors?.initial_location_id}><select id="handover-location" value={values.initial_location_id} onChange={(event) => setValues({ ...values, initial_location_id: event.target.value })} required><option value="">Select a location</option>{refs.payload?.locations?.map((row) => <option value={row.location_id} key={row.location_id}>{row.location_code} · {row.location_description}</option>)}</select></WorkflowField>
-            {refs.loading && <LoadingState label="Loading categories and storage locations…" />}{refs.error && <ErrorNotice error={refs.error} />}
+          <FormDialog open={handoverOpen && report.status === "PENDING"} discardLabel="Discard changes" title="Record physical handover" description="Select the official category and initial storage location for the received item." onClose={() => { setHandoverOpen(false); setValues({ category_id: "", initial_location_id: "" }); setActionError(null); }}><WorkflowForm onSubmit={receive} validationTitle="Check the form" failureTitle="Couldn't receive the item" busy={busy} error={actionError} fields={{ category_id: { id: "handover-category", label: "Official category" }, initial_location_id: { id: "handover-location", label: "Initial storage location" } }} actions={<button className="button button-primary" type="submit" disabled={busy || !referenceReady(categories) || !referenceReady(locations)}>{busy ? "Recording handover…" : "Record physical handover"}</button>}>
+            <ReferenceSelect resource={categories} label="Official category" id="handover-category" value={values.category_id} onChange={event => setValues({ ...values, category_id: event.target.value })} fieldError={actionError?.errors?.category_id} rowKey="category_id" optionLabel={row => row.category_name} placeholder="Select a category" emptyText="No categories are available. Add an official category in Categories and storage." />
+            <ReferenceSelect resource={locations} label="Initial storage location" id="handover-location" value={values.initial_location_id} onChange={event => setValues({ ...values, initial_location_id: event.target.value })} fieldError={actionError?.errors?.initial_location_id} rowKey="location_id" optionLabel={row => row.location_code + " · " + row.location_description} placeholder="Select a location" emptyText="No storage locations are available. Add a location in Categories and storage." />
+
             <div className="notice notice-info">Submitting handover creates the found item and first storage assignment. Each pending report can be received once.</div>
           </WorkflowForm></FormDialog>
-          {report.status !== "PENDING" && <p className="muted-copy">This report is {report.status}. Further handover changes are not available.</p>}
+          {report.status !== "PENDING" && <p className="muted-copy">{report.status === "CLOSED" ? "This report was closed without recording item handover." : report.status === "RECEIVED" ? "Staff has recorded receipt and initial storage placement." : "The reporter withdrew this report."} Further handover changes are not available.</p>}
         </Panel>
         </section>
       </div>
@@ -178,7 +170,7 @@ export function MissingQueuePage() {
         { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.category_name || "No category selected"}</small></> },
         { key: "reporter_name", label: "Reporter", render: (row) => <><strong>{row.reporter_name}</strong><small className="table-subline">{row.reporter_email}</small></> },
         { key: "last_known_location", label: "Last known location" },
-        { key: "status", label: "Status", render: (row) => <StatusBadge value={row.status} /> },
+        { key: "status", label: "Status", render: (row) => <StaffStatus value={row.status} /> },
         { key: "review", label: "Review", render: (row) => <Link to={"/staff/missing-reports/" + row.report_id} state={{ reviewFrom }}>Open report</Link> },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
@@ -205,7 +197,7 @@ export function MissingReportDetailPage() {
     {resource.loading ? <LoadingState label="Loading missing report…" /> : resource.error ? <ErrorNotice error={resource.error} /> : report && <>
       <ErrorNotice error={actionError} />
       <ImageManager path={"staff/missing-reports/" + reportId + "/images"} readOnly />
-      <Panel title="Private report details"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Category</dt><dd>{report.category_name || "Not selected"}</dd></div><div><dt>Last-known location</dt><dd>{report.last_known_location}</dd></div><div><dt>Last seen</dt><dd>{formatDate(report.lost_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter contact</dt><dd>{report.reporter_contact}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Status</dt><dd><StatusBadge value={report.status} /></dd></div><div><dt>Previously reviewed</dt><dd>{report.reviewer_name ? report.reviewer_name + " · " + formatDate(report.reviewed_at, { time: true }) : "No"}</dd></div></dl>
+      <Panel title="Private report details"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Category</dt><dd>{report.category_name || "Not selected"}</dd></div><div><dt>Last-known location</dt><dd>{report.last_known_location}</dd></div><div><dt>Last seen</dt><dd>{formatDate(report.lost_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter contact</dt><dd>{report.reporter_contact}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Status</dt><dd><StaffStatus value={report.status} /></dd></div><div><dt>Previously reviewed</dt><dd>{report.reviewer_name ? report.reviewer_name + " · " + formatDate(report.reviewed_at, { time: true }) : "No"}</dd></div></dl>
         {!report.reviewed_at && report.status !== "WITHDRAWN" && <div className="form-actions"><button className="button button-primary" type="button" disabled={busy} onClick={review}>{busy ? "Recording review…" : "Record review"}</button></div>}
         {report.status === "OPEN" && <div className="form-actions"><PossibleMatchForm reportId={report.report_id} onSent={resource.reload} /></div>}
       </Panel>
@@ -216,7 +208,9 @@ export function MissingReportDetailPage() {
 export function IntakePage() {
   const draft = useRecordImage();
   const notify = useSuccessToast();
-  const refs = ReferenceOptions();
+  const categories = useReferenceList("categories");
+  const locations = useReferenceList("storage-locations");
+  const people = useReferenceList("people");
   const [values, setValues] = useState({ finder_id: "", category_id: "", initial_location_id: "", item_description: "", found_place: "", found_at: localDateTime() });
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
@@ -233,16 +227,16 @@ export function IntakePage() {
     <PageHeading eyebrow="INTAKE" title="Receive a found item" description="Create a staff intake record with its initial storage assignment." action={<Link className="button button-secondary" to="/staff/finder-reports">Review finder reports</Link>} />
     {success && <p><Link to={"/staff/items/" + success.item_id}>Open item record #{success.item_id}</Link></p>}
     <Panel className="reference-form-panel" title="Staff intake" description="Describe the found item, then record its finder and initial storage location after physical handover.">
-      {refs.error && <ErrorNotice error={refs.error} />}
+
       <div className="form-actions intake-actions">
         <button className="button button-primary" type="button" onClick={() => { if (success) { setSuccess(null); setValues({ finder_id: "", category_id: "", initial_location_id: "", item_description: "", found_place: "", found_at: localDateTime() }); } setFormOpen(true); }}>{success ? "Receive another item" : "Start staff intake"}</button>
-        <WalkInFinder onCreated={person => { refs.reload(); setValues(current => ({ ...current, finder_id: String(person.person_id) })); }} />
+        <WalkInFinder onCreated={person => { people.reload(); setValues(current => ({ ...current, finder_id: String(person.person_id) })); }} />
       </div>
-      <FormDialog open={formOpen} discardLabel="Discard changes" title="Receive a found item" description="Record item details, finder, category, and the first storage assignment after handover." onClose={() => { setFormOpen(false); if (draft.record) setSuccess(draft.record); draft.reset(); setValues({ finder_id: "", category_id: "", initial_location_id: "", item_description: "", found_place: "", found_at: localDateTime() }); setError(null); }}><WorkflowForm onSubmit={submit} validationTitle="Check the form" failureTitle="Couldn't receive the item" busy={busy} error={error} fields={{ image: { id: "intake-image", label: "Photo" }, ...foundItemTargets("intake", "category_id", "Official category", true), finder_id: { id: "finder_id", label: "Finder" }, initial_location_id: { id: "initial_location_id", label: "Initial storage location" } }} actions={<button className="button button-primary" type="submit" disabled={busy || refs.loading || Boolean(success) || draft.uncertain}>{busy ? "Saving intake…" : draft.record ? "Finish saving intake" : "Receive item and assign storage"}</button>}>
-        <fieldset className="record-draft-fields" disabled={busy || Boolean(draft.record)}><FoundItemFields passive prefix="intake" values={values} onChange={setValues} error={error} maxDateTime={localDateTime()} category={<WorkflowField label="Official category" name="category_id" error={error?.errors?.category_id}><select id="category_id" value={values.category_id} onChange={(event) => setValues({ ...values, category_id: event.target.value })} required><option value="">Select a category</option>{refs.payload?.categories?.map((row) => <option key={row.category_id} value={row.category_id}>{row.category_name}</option>)}</select></WorkflowField>} />
+      <FormDialog open={formOpen} discardLabel="Discard changes" title="Receive a found item" description="Record item details, finder, category, and the first storage assignment after handover." onClose={() => { setFormOpen(false); if (draft.record) setSuccess(draft.record); draft.reset(); setValues({ finder_id: "", category_id: "", initial_location_id: "", item_description: "", found_place: "", found_at: localDateTime() }); setError(null); }}><WorkflowForm onSubmit={submit} validationTitle="Check the form" failureTitle="Couldn't receive the item" busy={busy} error={error} fields={{ image: { id: "intake-image", label: "Photo" }, ...foundItemTargets("intake", "category_id", "Official category", true), finder_id: { id: "finder_id", label: "Finder" }, initial_location_id: { id: "initial_location_id", label: "Initial storage location" } }} actions={<button className="button button-primary" type="submit" disabled={busy || !referenceReady(categories) || !referenceReady(locations) || !referenceReady(people) || Boolean(success) || draft.uncertain}>{busy ? "Saving intake…" : draft.record ? "Finish saving intake" : "Receive item and assign storage"}</button>}>
+        <fieldset className="record-draft-fields" disabled={busy || Boolean(draft.record)}><FoundItemFields passive timeHint="Philippine time (Asia/Manila, UTC+08:00)." prefix="intake" values={values} onChange={setValues} error={error} maxDateTime={localDateTime()} category={<ReferenceSelect resource={categories} label="Official category" id="category_id" value={values.category_id} onChange={event => setValues({ ...values, category_id: event.target.value })} fieldError={error?.errors?.category_id} rowKey="category_id" optionLabel={row => row.category_name} placeholder="Select a category" emptyText="No categories are available. Add an official category in Categories and storage." />} />
         <fieldset className="workflow-section"><legend>Handover details</legend><div className="workflow-grid">
-          <WorkflowField label="Finder" name="finder_id" error={error?.errors?.finder_id}><select id="finder_id" value={values.finder_id} onChange={(event) => setValues({ ...values, finder_id: event.target.value })} required><option value="">Select a person</option>{refs.payload?.people?.map((row) => <option key={row.person_id} value={row.person_id}>{row.full_name} · {row.contact_details}</option>)}</select></WorkflowField>
-          <WorkflowField label="Initial storage location" name="initial_location_id" error={error?.errors?.initial_location_id}><select id="initial_location_id" value={values.initial_location_id} onChange={(event) => setValues({ ...values, initial_location_id: event.target.value })} required><option value="">Select a location</option>{refs.payload?.locations?.map((row) => <option key={row.location_id} value={row.location_id}>{row.location_code} · {row.location_description}</option>)}</select></WorkflowField>
+          <ReferenceSelect resource={people} label="Finder" id="finder_id" value={values.finder_id} onChange={event => setValues({ ...values, finder_id: event.target.value })} fieldError={error?.errors?.finder_id} rowKey="person_id" optionLabel={row => row.full_name + " · " + row.contact_details} placeholder="Select a person" emptyText="No people are available. Add a walk-in finder before intake." />
+          <ReferenceSelect resource={locations} label="Initial storage location" id="initial_location_id" value={values.initial_location_id} onChange={event => setValues({ ...values, initial_location_id: event.target.value })} fieldError={error?.errors?.initial_location_id} rowKey="location_id" optionLabel={row => row.location_code + " · " + row.location_description} placeholder="Select a location" emptyText="No storage locations are available. Add a location in Categories and storage." />
         </div></fieldset></fieldset>
         <DraftImage onChange={() => setError(null)} draft={draft} id="intake-image" intake busy={busy} error={error} onViewSaved={row => { setSuccess(row); setFormOpen(false); draft.reset(); }} />
       </WorkflowForm></FormDialog>
