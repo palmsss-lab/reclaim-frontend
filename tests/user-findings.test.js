@@ -50,13 +50,17 @@ test("missing-report empty states distinguish no reports from an empty status ta
 
 test("report photo buttons reflect the existing edit permission and keep the reference", async () => {
   const { ReportImages } = await server.ssrLoadModule("/src/components/Images.jsx");
+  const { ConfirmationProvider } = await server.ssrLoadModule("/src/components/Confirmation.jsx");
   for (const [kind, status, editable] of [
     ["finder", "PENDING", true], ["finder", "RECEIVED", false], ["finder", "CLOSED", false], ["finder", "WITHDRAWN", false],
     ["missing", "OPEN", true], ["missing", "RESOLVED", false], ["missing", "WITHDRAWN", false],
   ]) {
-    const markup = html(ReportImages, { kind, report: { report_id: 27, status } });
+    const markup = renderToStaticMarkup(createElement(ConfirmationProvider, null, createElement(ReportImages, { kind, report: { report_id: 27, status } })));
     assert.ok(markup.includes((editable ? "Manage photos" : "View photos") + " for report #27"));
     assert.ok(markup.includes('aria-expanded="false"'));
+    assert.ok(markup.includes('aria-haspopup="dialog"'));
+    assert.ok(markup.includes('aria-label="Close report photos"'));
+    assert.ok(!markup.includes("Report images are private"), "closed photo dialogs do not mount private image content");
   }
 });
 

@@ -52,6 +52,26 @@
 .report-images-dialog { width: min(calc(100% - 2rem), 48rem); }
 .report-images-dialog .form-dialog-header { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
 .report-images-dialog .images-panel .panel-heading { margin-bottom: 16px; }
+.finder-report-images-dialog { width: min(calc(100% - 2rem), 56rem); }
+.finder-report-images { width: 100%; overflow-wrap: anywhere; }
+.finder-report-images .image-focus-target p { margin-top: 0; }
+.finder-report-images .image-manager-grid { grid-template-columns: minmax(0, 1fr); }
+.finder-report-images .image-manager-grid figure { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-control); }
+.finder-report-images figcaption { margin: 0; font-weight: 600; }
+.finder-report-images .image-controls { gap: 8px; align-items: stretch; flex-direction: column; }
+.finder-report-images .image-controls > * { width: 100%; min-height: 44px; }
+.finder-report-photo { display: grid; place-items: center; min-width: 0; min-height: 12rem; border-radius: var(--radius-control); background: var(--surface-muted); }
+.finder-report-photo .item-photograph { max-height: min(24rem, 48dvh); }
+.finder-report-photo .item-photograph[hidden] { display: none; }
+.finder-report-photo .loading-state { margin: 0; padding: 16px; }
+.finder-photo-error { padding: 16px; text-align: center; }
+.finder-photo-error p { margin: 0 0 12px; }
+.finder-report-photo:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+@media (min-width: 640px) {
+  .finder-report-images .image-manager-grid figure:has(.image-controls) { grid-template-columns: minmax(0, 1fr) 10rem; }
+  .finder-report-images .image-controls { grid-column: 2; grid-row: 1 / span 2; }
+  .finder-report-images figcaption { grid-column: 1; }
+}
 @media (max-width: 600px) {
   .report-images-dialog { width: calc(100% - 1rem); }
   .report-images-dialog .image-controls > *, .report-images-dialog .images-panel > .button,

@@ -1,6 +1,7 @@
 import { useSuccessToast } from "./Toast";
 import { useConfirm } from "./Confirmation";
 import { FormDialog } from "./FormDialog";
+import FinderReportPhoto from "./FinderReportPhoto";
 import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import { ErrorNotice, Field, LoadingState, Panel, useApiResource } from "./ui";
@@ -49,7 +50,7 @@ function ImageMoreActions({ index, triggerId, busy, onReplace, onRemove }) {
   </details>;
 }
 
-export function ImageManager({ path, readOnly = false, publication = false }) {
+export function ImageManager({ path, readOnly = false, publication = false, finderReport = false }) {
   const confirm = useConfirm();
   const resource = useApiResource("images-" + path, () => api(path), true);
   const [selected, setSelected] = useState(null);
@@ -59,6 +60,7 @@ export function ImageManager({ path, readOnly = false, publication = false }) {
   const [error, setError] = useState(null);
   const [privacyNotice, setPrivacyNotice] = useState("");
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [photoRevision, setPhotoRevision] = useState(0);
   const input = useRef(null), heading = useRef(null), uploadTrigger = useRef(null), uploadTriggerId = useRef("add");
   const inputId = useId();
   useEffect(() => {
@@ -75,6 +77,8 @@ export function ImageManager({ path, readOnly = false, publication = false }) {
       const result = await action();
       setPrivacyNotice("");
       notify(message, message + "-" + (result?.data?.image_id ?? path)); setSelected(null); setReplacing(null);
+      // Reload replacements even when the API's timestamp precision leaves updated_at unchanged.
+      if (finderReport) setPhotoRevision(value => value + 1);
       if (input.current) input.current.value = "";
       resource.reload(); if (!uploadOpen) heading.current?.focus();
       return true;
@@ -98,7 +102,7 @@ export function ImageManager({ path, readOnly = false, publication = false }) {
     if (await confirm("Permanently remove this image?", { confirmLabel: publication || path.startsWith("my/") ? "Remove photo" : "Confirm", danger: publication })) mutate(() => api(path + "/" + imageId, { method: "DELETE" }), "Image removed.");
   }
   const attachButton = !readOnly && <button className="button button-primary" type="button" data-upload-trigger={inputId + "-add"} aria-disabled={busy || resource.rows.length >= 5 || resource.loading || Boolean(resource.error) || undefined} onClick={(event) => { if (!busy && resource.rows.length < 5 && !resource.loading && !resource.error) openUpload(event.currentTarget); }}>Attach image</button>;
-  return <Panel className={"images-panel" + (publication ? " staff-item-images" : "")} title="Images" action={publication ? attachButton : undefined}>
+  return <Panel className={"images-panel" + (publication ? " staff-item-images" : "") + (finderReport ? " finder-report-images" : "")} title="Images" action={publication || finderReport ? attachButton : undefined}>
     <div ref={heading} tabIndex="-1" className="image-focus-target" aria-label="Image management">
       <p>{publication ? "Images remain private until you approve each one and publish the item. Check the photo for faces, contacts, labels and private identifying details before approval." : "Report images are private to the report owner and authorized staff. They are not automatically published or copied at handover."}</p>
     </div>
@@ -106,7 +110,7 @@ export function ImageManager({ path, readOnly = false, publication = false }) {
     {privacyNotice && <div className="notice notice-info" role="status">{privacyNotice}</div>}
     {resource.error && <button className="text-button" type="button" onClick={resource.reload}>Retry images</button>}
     {resource.loading && !resource.rows.length ? <LoadingState label="Loading images..." /> : <div className="image-manager-grid">{resource.rows.map((image, index) => <figure key={image.image_id}>
-      <ImagePreview path={path + "/" + image.image_id + "/content"} version={image.updated_at} alt={(publication ? "Item photograph " : "Private item photograph ") + (index + 1)} />
+      {finderReport ? <FinderReportPhoto path={path + "/" + image.image_id + "/content"} version={image.updated_at + ":" + photoRevision} index={index + 1} /> : <ImagePreview path={path + "/" + image.image_id + "/content"} version={image.updated_at} alt={(publication ? "Item photograph " : "Private item photograph ") + (index + 1)} />}
       <figcaption><span>Image {index + 1}</span>{publication && <span className="image-privacy-status">{image.approved ? "Approved for public display" : "Private"}</span>}</figcaption>
       {!readOnly && <div className="image-controls">
         {publication && <button className="button button-secondary button-small" type="button" disabled={busy} onClick={async () => { if (!image.approved && !await confirm("Approve this photo for public display? Confirm it contains no private evidence or contact details.", { confirmLabel: "Approve photo" })) return; mutate(() => api(path + "/" + image.image_id + "/publication", { method: "PUT", body: { approved: !image.approved } }), image.approved ? "Public approval removed." : "Image approved. It is public only while the item listing is available."); }}>{image.approved ? "Make image " + (index + 1) + " private" : "Approve image " + (index + 1) + " for public display"}</button>}
@@ -117,7 +121,7 @@ export function ImageManager({ path, readOnly = false, publication = false }) {
       </div>}
     </figure>)}</div>}
     {!resource.loading && !resource.error && !resource.rows.length && <p className="muted-copy">No images attached.</p>}
-    {!readOnly && <>{!publication && attachButton}
+    {!readOnly && <>{!publication && !finderReport && attachButton}
     <FormDialog discardLabel={publication || path.startsWith("my/") ? "Discard changes" : "Confirm"} open={uploadOpen} title={replacing ? "Replace image" : "Attach image"} returnFocusRef={uploadTrigger} returnFocus={findUploadTrigger} onClose={closeUpload}><form onSubmit={upload} aria-busy={busy}>
       <ErrorNotice error={error} fields={{ image: { id: inputId, label: "Image" } }} />
       <Field label={replacing ? "Replacement image" : "Attach image"} name={inputId} error={error?.errors?.image} hint="JPEG, PNG or WebP. Up to 5 MiB, 4096 pixels per side, 8 million pixels; maximum 5 images. Images are saved as JPEG without metadata.">
@@ -136,8 +140,8 @@ export function ReportImages({ report, kind }) {
   const [open, setOpen] = useState(false);
   const button = useRef(null);
   return <div className="report-images"><button ref={button} type="button" className="button button-secondary button-small" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{readOnly ? "View photos" : "Manage photos"} for report #{report.report_id}</button>
-    <FormDialog className="report-images-dialog" open={open} title={"Photos for report #" + report.report_id} closeLabel="Close report photos" returnFocusRef={button} onClose={() => setOpen(false)}>
-      <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} />
+    <FormDialog className={"report-images-dialog" + (kind === "finder" ? " finder-report-images-dialog" : "")} open={open} title={"Photos for report #" + report.report_id} closeLabel="Close report photos" returnFocusRef={button} onClose={() => setOpen(false)}>
+      <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} finderReport={kind === "finder"} />
     </FormDialog>
   </div>;
 }
