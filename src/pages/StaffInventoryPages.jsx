@@ -35,7 +35,7 @@ export function ItemListPage() {
 
   return <>
     <PageHeading eyebrow="INVENTORY" title="Found items" description="Search stored and returned items using staff-only item details, location filters, and receipt dates." action={<Link className="button button-primary" to="/staff/items/new">Receive an item</Link>} />
-    <Panel title="Item inventory">
+    <Panel className="inventory-panel" title="Item inventory">
       <StatusTabs label="Item classification" options={[{ value: "stored", label: "In storage" }, { value: "returned", label: "Returned" }]} value={status} counts={resource.payload?.tabCounts} onChange={value => setSearchParams({ ...applied, status: value, page: "1" })}>
       <p className="muted-copy">Items remain in storage until staff completes a return, including items with pending or rejected claims. Counts include all items matching these filters.</p>
       <form className="inventory-filter-form" aria-describedby="inventory-filter-help" onSubmit={(event) => { event.preventDefault(); setSearchParams({ ...filters, status, page: "1" }); }}>
@@ -47,6 +47,7 @@ export function ItemListPage() {
         <button className="button button-secondary" type="submit">Apply filters</button>
       </form>
       <p id="inventory-filter-help" className="inventory-filter-help">Storage location matches current and previous placements. Receipt dates include both endpoints.</p>
+      <p className="inventory-table-hint">Scroll the item table sideways to see all details and actions. You can also focus the table and use the arrow keys.</p>
 
       {resource.loading ? <LoadingState label="Loading item inventory…" /> : resource.error ? <ErrorNotice error={resource.error} fields={{ q: { id: "item-search", label: "Search items" }, category_id: { id: "item-category", label: "Category" }, location_id: { id: "item-location", label: "Storage location" }, received_from: { id: "item-received-from", label: "Received from" }, received_to: { id: "item-received-to", label: "Received through" } }} focus={resource.error.status === 422} /> : <DataTable caption="Staff item inventory" rows={resource.rows} rowKey={(row) => row.item_id} emptyTitle={filtersActive ? "No items match" : status === "returned" ? "No returned items yet" : "No items in storage"} emptyText={filtersActive ? "Try a different search or clear the filters." : status === "returned" ? "Items appear here after staff completes a return." : "Received items will appear here while they are in storage."} emptyAction={filtersActive ? <button type="button" className="button button-secondary" onClick={() => setSearchParams({ status, page: "1" })}>Clear filters</button> : undefined} columns={[
         { key: "item_description", label: "Item", render: (row) => <strong>{row.item_description}</strong> },

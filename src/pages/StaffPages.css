@@ -1,4 +1,4 @@
-.staff-dashboard-grid { display: grid; grid-template-columns: minmax(0,2fr) minmax(280px,1fr); gap: 24px; align-items: start; }
+.staff-dashboard-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 24px; align-items: start; }
 .staff-filter-form { display: grid; grid-template-columns: minmax(230px,1fr) minmax(170px,.45fr) auto; gap: 16px; align-items: start; margin-bottom: 18px; }
 .staff-filter-form > .button { margin-top: calc(14px * 1.6 + 6px); }
 .staff-detail-grid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(300px,.85fr); gap: 24px; align-items: start; }

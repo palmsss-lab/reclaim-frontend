@@ -1,7 +1,7 @@
 import { ToastProvider } from "./components/Toast";
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from "react-router";
 import { useEffect, useState } from "react";
-import { AuthProvider, useAuth } from "./auth/AuthContext";
+import { AuthProvider, SessionCheckNotice, useAuth } from "./auth/AuthContext";
 import { api } from "./api/client";
 import { ErrorNotice, LoadingState } from "./components/ui";
 import { PublicShell, StaffShell } from "./components/Shell";
@@ -20,7 +20,8 @@ import SetPasswordPage from "./pages/SetPasswordPage";
 import { afterSignIn, authPath } from "./auth/returnPath";
 
 function RouteGate({ roles, admin = false, verified = false }) {
-  const { session, setAdminAccess } = useAuth();
+  const GateContainer = roles.includes("user") ? "section" : "main";
+  const { session, setAdminAccess, checkingSession, sessionError } = useAuth();
   const location = useLocation();
   const [checking, setChecking] = useState(false);
   const [accessError, setAccessError] = useState(null);
@@ -43,6 +44,7 @@ function RouteGate({ roles, admin = false, verified = false }) {
     return () => { active = false; };
   }, [admin, session?.role, location.pathname, probe, setAdminAccess]);
 
+  if (checkingSession || sessionError) return <GateContainer id={roles.includes("user") ? undefined : "main"} className="gate-state"><h1>Confirm your session to continue</h1>{!roles.includes("user") && <SessionCheckNotice />}<Link to="/">Browse found items</Link></GateContainer>;
   if (!session) return <Navigate to="/login" replace />;
   if (!roles.includes(session.role)) return <Navigate to={afterSignIn(session)} replace />;
   if (verified && session.role === "user" && session.identity?.email_verified !== true) return <Navigate to={authPath("/verify-email", location.pathname + location.search)} replace />;

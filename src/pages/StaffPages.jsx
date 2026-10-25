@@ -1,3 +1,4 @@
+import { DashboardContent, DashboardStat } from "../components/Dashboard";
 import ReferenceSelect, { referenceReady, useReferenceList } from "../components/ReferenceSelect";
 import StaffStatus, { staffStatusLabel } from "../components/StaffStatus";
 import { manilaDateTime as localDateTime, manilaInputTimestamp as apiDateTime } from "../api/dates";
@@ -13,7 +14,7 @@ import { useState } from "react";
 import { Link, useLocation, useParams } from "react-router";
 import { useQueueFilters } from "../hooks/useQueueFilters";
 import { reviewContext } from "../navigation/reviewContext";
-import { api, allPages, pageInfo } from "../api/client";
+import { api, allPages } from "../api/client";
 import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, formatDate, useApiResource } from "../components/ui";
 import "./StaffPages.css";
 
@@ -26,43 +27,41 @@ function ReportFilters({ values, onChange, onSubmit, statuses, error }) {
 }
 
 export function StaffDashboardPage() {
-  const resource = useApiResource("staff-dashboard", async () => {
-    const [finder, missing, claims, occupancy] = await Promise.all([
-      api("staff/finder-reports", { query: { status: "PENDING", per_page: 5 } }),
-      api("staff/missing-reports", { query: { status: "OPEN", per_page: 5 } }),
-      api("reports/pending-claims", { query: { per_page: 5 } }),
-      allPages("reports/storage-occupancy"),
-    ]);
-    return { finder, missing, claims, occupancy };
-  });
-  const data = resource.payload;
-  const storedItems = (data?.occupancy?.data || []).reduce((sum, row) => sum + Number(row.current_item_count || 0), 0);
-
+  const finder = useApiResource("dashboard-finder", () => api("staff/finder-reports", { query: { status: "PENDING", per_page: 5 } }));
+  const missing = useApiResource("dashboard-missing", () => api("staff/missing-reports", { query: { status: "OPEN", per_page: 5 } }));
+  const claims = useApiResource("dashboard-claims", () => api("reports/pending-claims", { query: { per_page: 5 } }));
+  const occupancy = useApiResource("dashboard-occupancy", () => allPages("reports/storage-occupancy"));
+  const storedItems = occupancy.rows.reduce((sum, row) => sum + Number(row.current_item_count || 0), 0);
   return <>
-    <PageHeading eyebrow="OPERATIONS" title="Staff dashboard" description="Review new reports, track claims, and manage items in storage." action={<Link className="button button-primary" to="/staff/items/new">Receive an item</Link>} />
+    <PageHeading title="Staff dashboard" description="Review new reports, track claims, and manage items in storage." action={<Link className="button button-primary" to="/staff/items/new">Receive an item</Link>} />
     <div className="section-note"><strong>Workflow:</strong> Receive the item after physical handover, choose its storage location, and publish a separate public description before a user can claim it.</div>
-    {resource.loading && <LoadingState label="Loading Reclaim operations…" />}
-    <ErrorNotice error={resource.error} />
-    {data && <>
-      <div className="stats-grid"><div className="stat-card"><span>Finder reports</span><strong>{pageInfo(data.finder).total}</strong><small>Awaiting handover review</small></div><div className="stat-card"><span>Missing reports</span><strong>{pageInfo(data.missing).total}</strong><small>Open reports</small></div><div className="stat-card"><span>Pending claims</span><strong>{pageInfo(data.claims).total}</strong><small>Require staff review</small></div><div className="stat-card"><span>Items in storage</span><strong>{storedItems}</strong><small>Across all storage locations</small></div></div>
-      <div className="staff-dashboard-grid">
-        <Panel title="Finder reports awaiting handover" action={<Link to="/staff/finder-reports">View queue</Link>}>
-          <DataTable caption="Finder reports awaiting handover" rows={data.finder.data || []} rowKey={(row) => row.report_id} emptyTitle="No finder reports awaiting handover" emptyText="There are no found-item reports awaiting handover review." columns={[
-            { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.reporter_name} · {row.reporter_email}</small></> },
-            { key: "submitted_at", label: "Reported", render: (row) => formatDate(row.submitted_at) },
-            { key: "open", label: "Review", render: (row) => <Link to={"/staff/finder-reports/" + row.report_id} state={{ reviewFrom: "/staff" }}>Review</Link> },
+    <div className="stats-grid">
+      <DashboardStat resource={finder} label="Finder reports" note="Awaiting handover review" />
+      <DashboardStat resource={missing} label="Missing reports" note="Open reports" />
+      <DashboardStat resource={claims} label="Pending claims" note="Require staff review" />
+      <DashboardStat resource={occupancy} label="Items in storage" value={storedItems} note="Across all storage locations" />
+    </div>
+    <div className="staff-dashboard-grid">
+      <Panel title="Finder reports awaiting handover" action={<Link to="/staff/finder-reports">View queue</Link>}>
+        <DashboardContent resource={finder} label="Finder reports">
+          <DataTable caption="Finder reports awaiting handover" rows={finder.rows} rowKey={row => row.report_id} emptyTitle="No finder reports awaiting handover" emptyText="There are no found-item reports awaiting handover review." columns={[
+            { key: "item_description", label: "Item", render: row => <><strong>{row.item_description}</strong><small className="table-subline">{row.reporter_name} · {row.reporter_email}</small></> },
+            { key: "submitted_at", label: "Reported", render: row => formatDate(row.submitted_at) },
+            { key: "open", label: "Review", render: row => <Link to={"/staff/finder-reports/" + row.report_id} state={{ reviewFrom: "/staff" }}>Review</Link> },
           ]} />
-        </Panel>
-        <Panel title="Claims to review" action={<Link to="/staff/claims">View claims</Link>}>
-          <DataTable caption="Pending claims" rows={data.claims.data || []} rowKey={(row) => row.item_id + "-" + row.claimant_id} emptyTitle="No claims awaiting review" emptyText="There are no claims awaiting review." columns={[
-            { key: "claimant", label: "Claimant", render: (row) => row.claimant?.full_name || "—" },
-            { key: "item", label: "Item", render: (row) => <><strong>{row.item?.item_description || ("Item #" + row.item_id)}</strong><small className="table-subline">{row.item?.category?.category_name || ""}</small></> },
-            { key: "submitted_at", label: "Claim submitted", render: (row) => formatDate(row.submitted_at) },
-            { key: "open", label: "Review", render: (row) => <Link to={"/staff/items/" + row.item_id + "?claimant=" + row.claimant_id} state={{ reviewFrom: "/staff" }}>Review</Link> },
+        </DashboardContent>
+      </Panel>
+      <Panel title="Claims to review" action={<Link to="/staff/claims">View claims</Link>}>
+        <DashboardContent resource={claims} label="Pending claims">
+          <DataTable caption="Pending claims" rows={claims.rows} rowKey={row => row.item_id + "-" + row.claimant_id} emptyTitle="No claims awaiting review" emptyText="There are no claims awaiting review." columns={[
+            { key: "claimant", label: "Claimant", render: row => row.claimant?.full_name || "—" },
+            { key: "item", label: "Item", render: row => <><strong>{row.item?.item_description || ("Item #" + row.item_id)}</strong><small className="table-subline">{row.item?.category?.category_name || ""}</small></> },
+            { key: "submitted_at", label: "Claim submitted", render: row => formatDate(row.submitted_at) },
+            { key: "open", label: "Review", render: row => <Link to={"/staff/items/" + row.item_id + "?claimant=" + row.claimant_id} state={{ reviewFrom: "/staff" }}>Review</Link> },
           ]} />
-        </Panel>
-      </div>
-    </>}
+        </DashboardContent>
+      </Panel>
+    </div>
   </>;
 }
 

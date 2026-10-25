@@ -1,3 +1,4 @@
+import { DashboardContent, DashboardStat } from "../components/Dashboard";
 import { UserStatus } from "../components/UserStatus";
 import NotificationTarget from "../components/NotificationTarget";
 import { useSuccessToast } from "../components/Toast";
@@ -13,7 +14,7 @@ import { FormDialog } from "../components/FormDialog";
 import { PublicCategorySelect as CategorySelect } from "../components/PublicCategories";
 import { useState } from "react";
 import { Link } from "react-router";
-import { api, ApiError, pageInfo } from "../api/client";
+import { api, ApiError } from "../api/client";
 import { manilaDateTime, manilaInputTimestamp, parseApiDate } from "../api/dates";
 import { useAuth } from "../auth/AuthContext";
 import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, formatDate, useApiResource } from "../components/ui";
@@ -24,34 +25,33 @@ function apiDateTime(value) { return manilaInputTimestamp(value); }
 export function UserHomePage() {
   const { session } = useAuth();
   const verified = session?.identity?.email_verified === true;
-  const resource = useApiResource("user-dashboard-" + verified, async () => {
-    if (!verified) return { summary: null };
-    const [finder, missing, claims] = await Promise.all([
-      api("my/finder-reports", { query: { per_page: 4 } }),
-      api("my/missing-reports", { query: { per_page: 4 } }),
-      api("my/claims", { query: { per_page: 4 } }),
-    ]);
-    return { summary: { finder, missing, claims } };
-  });
-  const summary = resource.payload?.summary;
-  const finderCount = summary ? pageInfo(summary.finder).total : 0;
-  const missingCount = summary ? pageInfo(summary.missing).total : 0;
-  const claimCount = summary ? pageInfo(summary.claims).total : 0;
-
+  const finder = useApiResource("home-finder-" + verified, () => verified ? api("my/finder-reports", { query: { per_page: 4 } }) : Promise.resolve(null));
+  const missing = useApiResource("home-missing-" + verified, () => verified ? api("my/missing-reports", { query: { per_page: 4 } }) : Promise.resolve(null));
+  const claims = useApiResource("home-claims-" + verified, () => verified ? api("my/claims", { query: { per_page: 4 } }) : Promise.resolve(null));
+  const groups = [
+    { label: "Found-item reports", kind: "finder", to: "/my/finder-reports", resource: finder, note: "Items you have reported finding" },
+    { label: "Missing reports", kind: "missing", to: "/my/missing-reports", resource: missing, note: "Items you are looking for" },
+    { label: "Ownership claims", kind: "claim", to: "/my/claims", resource: claims, note: "Claims sent to Reclaim staff" },
+  ];
   return <div className="user-workspace">
-    <PageHeading eyebrow="MY RECLAIM" title={"Welcome, " + (session?.identity?.full_name || "there")} description="Keep track of the items you found, the belongings you lost, and your ownership claims." action={<Link className="button button-primary" to="/my/finder-reports">Report an item found</Link>} />
+    <PageHeading title={"Welcome, " + (session?.identity?.full_name || "there")} description="Keep track of the items you found, the belongings you lost, and your ownership claims." action={<Link className="button button-primary" to="/my/finder-reports">Report an item found</Link>} />
     {!verified && <div className="notice notice-info" role="status"><strong>Verify your email to continue</strong><span>Reclaim needs a verified email before you can submit reports or claims.</span><Link to="/verify-email">Open email verification</Link></div>}
-    {resource.error && <ErrorNotice error={resource.error} />}
-    {resource.loading && verified ? <LoadingState label="Loading your reports…" /> : verified && !resource.error && <>
-      <div className="stats-grid user-stats"><div className="stat-card"><span>Found-item reports</span><strong>{finderCount}</strong><small>Items you have reported finding</small></div><div className="stat-card"><span>Missing reports</span><strong>{missingCount}</strong><small>Items you are looking for</small></div><div className="stat-card"><span>Ownership claims</span><strong>{claimCount}</strong><small>Claims sent to Reclaim staff</small></div><div className="stat-card"><span>Email status</span><strong className="user-verified-value">Verified</strong><small>Reports and claims are enabled</small></div></div>
+    {verified && <>
+      <div className="stats-grid user-stats">
+        {groups.map(group => <DashboardStat key={group.kind} resource={group.resource} label={group.label} note={group.note} />)}
+        <div className="stat-card"><span>Email status</span><strong className="user-verified-value">Verified</strong><small>Reports and claims are enabled</small></div>
+      </div>
       <div className="user-dashboard-grid">
         <Panel title="Recent activity" description="Your private reports and claims.">
-          <div className="user-activity-list">
-            {summary?.finder?.data?.slice(0, 2).map((report) => <Link to="/my/finder-reports" className="user-activity-row" key={"finder-" + report.report_id}><span className="activity-icon">F</span><span><strong>{report.item_description}</strong><small>Found-item report · {formatDate(report.created_at)}</small></span><UserStatus kind="finder" value={report.status} /></Link>)}
-            {summary?.missing?.data?.slice(0, 2).map((report) => <Link to="/my/missing-reports" className="user-activity-row" key={"missing-" + report.report_id}><span className="activity-icon">M</span><span><strong>{report.item_description}</strong><small>Missing report · {formatDate(report.created_at)}</small></span><UserStatus kind="missing" value={report.status} /></Link>)}
-            {summary?.claims?.data?.slice(0, 2).map((claim) => <Link to="/my/claims" className="user-activity-row" key={"claim-" + claim.item_id}><span className="activity-icon">C</span><span><strong>{claim.public_description || claim.category_name || ("Item #" + claim.item_id)}</strong><small>Ownership claim · {formatDate(claim.submitted_at)}</small></span><UserStatus kind="claim" value={claim.outcome} /></Link>)}
-            {!finderCount && !missingCount && !claimCount && <EmptyState title="Your Reclaim activity will appear here">Use the links below to get started.</EmptyState>}
-          </div>
+          {groups.map(group => <section className="activity-group" key={group.kind} aria-label={group.label}>
+            <h3>{group.label}</h3>
+            <DashboardContent resource={group.resource} label={group.label}>
+              {group.resource.rows.length ? <div className="user-activity-list">{group.resource.rows.slice(0, 2).map(row => <Link to={group.to} className="user-activity-row" key={row.report_id || row.item_id}>
+                <span><strong>{row.item_description || row.public_description || row.category_name || ("Item #" + row.item_id)}</strong><small>{formatDate(row.submitted_at || row.created_at)}</small></span>
+                <UserStatus kind={group.kind} value={row.status || row.outcome} />
+              </Link>)}</div> : <p className="muted-copy">No {group.label.toLowerCase()} yet. <Link to={group.to}>Open {group.label.toLowerCase()}</Link></p>}
+            </DashboardContent>
+          </section>)}
         </Panel>
         <Panel title="What would you like to do?">
           <div className="quick-link-list"><Link to="/my/finder-reports"><div><strong>My found-item reports</strong><small>Report something you found and follow its handover to staff</small></div></Link><Link to="/my/missing-reports"><div><strong>My missing items</strong><small>Report a lost belonging or mark it resolved when you find it</small></div></Link><Link to="/my/claims"><div><strong>My claims</strong><small>Check staff decisions on items you believe are yours</small></div></Link><Link to="/profile"><div><strong>Account settings</strong><small>Update your contact details and sign-in methods</small></div></Link></div>

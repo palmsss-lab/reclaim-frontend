@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { useAuth } from "../auth/AuthContext";
+import { SessionCheckNotice, useAuth } from "../auth/AuthContext";
 import Brand from "./Brand";
 import AccountMenu from "./AccountMenu";
 import UserNotifications from "./UserNotifications";
@@ -14,7 +14,7 @@ function MainNavigation({ staff = false, id }) {
       {staff ? <NavLink to="/staff" end>Staff dashboard</NavLink> : <>
         <NavLink to="/" end>Browse items</NavLink>
         {session?.role === "user" && <>
-          <NavLink to="/my">My Reclaim</NavLink>
+          <NavLink to="/my" end>My Reclaim</NavLink>
           <NavLink to="/my/missing-reports">My missing items</NavLink>
           <NavLink to="/my/finder-reports">My found-item reports</NavLink>
           <NavLink to="/my/claims">My claims</NavLink>
@@ -31,11 +31,11 @@ function MobileNavigation({ staff }) {
   const label = staff ? "Staff navigation" : "Main navigation";
   useEffect(() => { setOpen(false); }, [location.pathname, location.search, location.hash]);
   useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 760px)");
+    const mobile = window.matchMedia(staff ? "(max-width: 1024px)" : "(max-width: 760px)");
     const resized = event => { if (!event.matches) setOpen(false); };
     mobile.addEventListener("change", resized);
     return () => mobile.removeEventListener("change", resized);
-  }, []);
+  }, [staff]);
   return <div className="mobile-navigation">
     <button className="button button-secondary mobile-navigation-toggle" type="button" aria-label={label} aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? navigationId : undefined} onClick={() => setOpen(true)}>
       <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -88,7 +88,7 @@ export function PublicShell() {
   return <div className="public-app-shell">
     <a className="skip-link" href="#main">Skip to content</a>
     <SiteHeader headerRef={headerRef} />
-    <main id="main" className="public-main" key={location.pathname}><Outlet /></main>
+    <main id="main" className="public-main" key={location.pathname}><SessionCheckNotice /><Outlet /></main>
     <Footer />
   </div>;
 }

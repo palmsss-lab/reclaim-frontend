@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useConfirm } from "./Confirmation";
 import "./FormDialog.css";
 import { trapDialogFocus } from "./dialogFocus";
+import { gsap } from "gsap";
 
 export function FormDialog({ open, title, description, onClose, returnFocusRef, returnFocus, children, className = "", discardLabel = "Confirm", closeLabel }) {
   const dialogRef = useRef(null);
@@ -23,7 +24,9 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
       dirtyRef.current = false;
       dialog.showModal();
       openedRef.current = true;
-      const target = dialog.querySelector("[data-dialog-initial-focus], input:not([type=hidden]):not(:disabled), textarea:not(:disabled), select:not(:disabled), button:not(:disabled)") || dialog.querySelector("h2");
+      const target = dialog.querySelector("[data-dialog-initial-focus]:not(:disabled)")
+        || dialog.querySelector('form input:not([type="hidden"]):not(:disabled), form textarea:not(:disabled), form select:not(:disabled), form button:not(:disabled)')
+        || dialog.querySelector("[data-dialog-close]:not(:disabled)") || dialog.querySelector("h2");
       target?.focus({ preventScroll: true });
     } else if (!open && dialog?.open) {
       dialog.close();
@@ -39,6 +42,15 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
   }, [open, returnFocusRef]);
 
   useEffect(() => () => { window.clearTimeout(focusTimerRef.current); if (dialogRef.current?.open) dialogRef.current.close(); }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const media = gsap.matchMedia();
+    media.add("(prefers-reduced-motion: no-preference)", () => {
+      gsap.fromTo(dialogRef.current, { y: 6 }, { y: 0, duration: .16, ease: "power2.out", clearProps: "transform" });
+    });
+    return () => media.revert();
+  }, [open]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -71,7 +83,7 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
     <div className="form-dialog-card">
       <header className="form-dialog-header">
         <div><h2 id={titleId} tabIndex="-1">{title}</h2>{description && <p>{description}</p>}</div>
-        <button className="form-dialog-close" type="button" aria-label={closeLabel || `Close ${title} form`} disabled={pending} onClick={requestClose}>
+        <button data-dialog-close className="form-dialog-close" type="button" aria-label={closeLabel || `Close ${title} form`} disabled={pending} onClick={requestClose}>
           <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 6 12 12M18 6 6 18" /></svg>
         </button>
       </header>

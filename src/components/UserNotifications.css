@@ -1,4 +1,5 @@
-.notification-bell { position: relative; min-width: 44px; width: 44px; min-height: 44px; padding: 9px; flex-shrink: 0; }
+.account-menu .button.notification-bell { position: relative; min-width: 44px; width: 44px; min-height: 44px; padding: 9px; flex-shrink: 0; }
+.notification-bell svg { width: 22px; height: 22px; flex: none; }
 .notification-badge { position: absolute; top: -5px; right: -6px; min-width: 20px; padding: 2px 4px; border-radius: 12px; background: var(--navy, #153c4b); color: white; font-size: 11px; line-height: 16px; }
 .notification-actions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
 .notification-list { list-style: none; margin: 0; padding: 0; }

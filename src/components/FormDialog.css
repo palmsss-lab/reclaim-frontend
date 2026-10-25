@@ -32,7 +32,3 @@ body:has(.form-dialog[open]) { overflow: hidden; }
   .form-dialog-body .form-actions { align-items: stretch; flex-direction: column; }
   .form-dialog-body .form-actions > .button { width: 100%; }
 }
-@media (prefers-reduced-motion: no-preference) {
-  .form-dialog[open] { animation: form-dialog-enter 140ms ease-out; }
-  @keyframes form-dialog-enter { from { opacity: 0; transform: translateY(6px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
-}

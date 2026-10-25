@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { api, initializeCsrf, setBearerToken } from "../api/client";
-import { ErrorNotice, LoadingState } from "../components/ui";
+import { LoadingState } from "../components/ui";
 import { useToastReset } from "../components/Toast";
 
 const AuthContext = createContext(null);
@@ -59,6 +59,7 @@ export function AuthProvider({ children }) {
     try {
       const current = await loadSession();
       setSession(current);
+      setRestoreError(null);
       resetToasts("Signed in.");
       return current;
     } catch (error) {
@@ -133,10 +134,18 @@ export function AuthProvider({ children }) {
     setSession((current) => current ? { ...current, isAccountAdmin: value, adminCheckError: message } : current);
   }, []);
 
-  const value = useMemo(() => ({ session, sessionNotice, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess }), [
-    session, sessionNotice, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess,
+  const retrySession = useCallback(() => setRevision(value => value + 1), []);
+  const value = useMemo(() => ({ session, sessionNotice, checkingSession: restoring, sessionError: restoreError, retrySession, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess }), [
+    session, sessionNotice, restoring, restoreError, retrySession, login, acceptGoogleLogin, logout, clearLocalSession, refreshIdentity, setAdminAccess,
   ]);
-  return <AuthContext.Provider value={value}>{restoring ? <main className="app-loading" aria-label="Loading Reclaim" aria-busy="true"><LoadingState label={<span className="sr-only">Loading Reclaim...</span>} /></main> : restoreError ? <main className="gate-state"><ErrorNotice error={restoreError} title="Your session could not be checked" /><button className="button button-secondary" type="button" onClick={() => setRevision(value => value + 1)}>Try again</button></main> : <SessionBoundary key={session ? session.role + ":" + (session.identity.user_id || session.identity.staff_id) : "guest"}>{children}</SessionBoundary>}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}><SessionBoundary key={session ? session.role + ":" + (session.identity.user_id || session.identity.staff_id) : "guest"}>{children}</SessionBoundary></AuthContext.Provider>;
+}
+
+export function SessionCheckNotice() {
+  const { checkingSession, sessionError, retrySession } = useAuth();
+  if (checkingSession) return <LoadingState label="Checking sign-in status…" />;
+  if (!sessionError) return null;
+  return <div className="notice notice-info session-check-notice" role="status"><div><strong>We couldn't check your sign-in status.</strong><p>You can still browse public items. Private pages need a confirmed session.</p></div><button className="button button-secondary button-small" type="button" onClick={retrySession}>Retry session check</button></div>;
 }
 
 export function useAuth() {

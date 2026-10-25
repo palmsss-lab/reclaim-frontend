@@ -31,6 +31,7 @@ a.account-name { display: inline-flex; align-items: center; min-height: 44px; }
 .sidebar-bottom { border-top: 1px solid var(--line); margin: 25px 10px 0; padding-top: 18px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .staff-content { width: 100%; max-width: 1440px; min-width: 0; margin: 0 auto; padding: 40px 32px; }
 .public-header .mobile-navigation { display: none; }
+.public-header .mobile-navigation-toggle { min-width: 44px; padding: 10px; }
 /* The header stays in flow; tall navigation reveals its bottom through page scrolling. */
 @media (min-width:761px) {
   .staff-sidebar { position: sticky; align-self: start; top: min(16px, calc(100dvh - var(--staff-sidebar-height, 100dvh) - 16px)); }
@@ -79,6 +80,14 @@ a.account-name { display: inline-flex; align-items: center; min-height: 44px; }
 .mobile-navigation-dialog .public-navigation a { padding: 10px 12px; overflow-wrap: anywhere; }
 .mobile-navigation-dialog .staff-navigation { padding: 0; }
 .mobile-navigation-dialog .staff-nav-group { display: block; }
+@media (min-width:761px) and (max-width:1024px) {
+  .staff-shell { display: block; }
+  .staff-sidebar { display: none; }
+  .staff-app-shell .public-header-inner { flex-wrap: nowrap; }
+  .staff-app-shell .public-header-inner > .public-navigation { display: none; }
+  .staff-app-shell .public-header-inner > .mobile-navigation { display: block; margin-left: auto; }
+  .staff-app-shell .public-header-inner > .account-menu { margin-left: 0; }
+}
 @media (max-width:760px) {
   .public-header-inner { flex-wrap: nowrap; }
   .public-header-inner > .public-navigation { display: none; }

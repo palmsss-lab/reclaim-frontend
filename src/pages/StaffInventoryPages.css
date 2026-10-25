@@ -2,6 +2,13 @@
 .inventory-filter-form :is(input, select, .button) { min-width: 0; width: 100%; height: 48px; }
 .inventory-filter-form .button { padding-inline: 16px; margin-top: calc(14px * 1.6 + 6px); }
 .inventory-filter-help { margin: 0 0 24px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.inventory-table-hint { display: none; color: var(--muted); font-size: 14px; }
+@media (min-width:761px) and (max-width:1024px) { .inventory-table-hint { display: block; } }
+@media (min-width:761px) {
+  .inventory-panel table { min-width: 48rem; }
+  .inventory-panel td { overflow-wrap: normal; }
+  .inventory-panel td:first-child { min-width: 16rem; }
+}
 @media(max-width:1199px) { .inventory-filter-form { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 .item-detail-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(300px,.9fr); gap: 24px; align-items: start; }
 .inventory-action-stack { display: grid; gap: 24px; }
