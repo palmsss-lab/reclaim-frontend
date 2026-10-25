@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { manilaDateTime, manilaInputTimestamp } from "../src/api/dates.js";
+import { manilaDateTime, manilaInputTimestamp, parseApiDate } from "../src/api/dates.js";
 
 test("staff intake inputs describe Philippine time on every device and retain ISO API timestamps", () => {
   const original = process.env.TZ;
@@ -10,6 +10,18 @@ test("staff intake inputs describe Philippine time on every device and retain IS
       assert.equal(manilaDateTime(new Date("2026-10-24T16:30:00Z")), "2026-10-25T00:30");
       assert.equal(manilaInputTimestamp("2026-10-25T00:30"), "2026-10-24T16:30:00.000Z");
       assert.equal(manilaInputTimestamp(""), "");
+    }
+  } finally { if (original === undefined) delete process.env.TZ; else process.env.TZ = original; }
+});
+
+test("user report event time round-trips as Manila wall time regardless of device timezone", () => {
+  const original = process.env.TZ;
+  try {
+    for (const zone of ["Asia/Manila", "UTC", "America/Los_Angeles", "Pacific/Auckland"]) {
+      process.env.TZ = zone;
+      const submitted = manilaInputTimestamp("2026-10-25T09:30");
+      assert.equal(submitted, "2026-10-25T01:30:00.000Z", zone);
+      assert.equal(manilaDateTime(parseApiDate("2026-10-25 09:30:00")), "2026-10-25T09:30", zone);
     }
   } finally { if (original === undefined) delete process.env.TZ; else process.env.TZ = original; }
 });

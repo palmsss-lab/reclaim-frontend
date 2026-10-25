@@ -50,7 +50,7 @@ function ImageMoreActions({ index, triggerId, busy, onReplace, onRemove }) {
   </details>;
 }
 
-export function ImageManager({ path, readOnly = false, publication = false, finderReport = false }) {
+export function ImageManager({ path, readOnly = false, publication = false, finderReport = false, onConflict }) {
   const confirm = useConfirm();
   const resource = useApiResource("images-" + path, () => api(path), true);
   const [selected, setSelected] = useState(null);
@@ -82,7 +82,15 @@ export function ImageManager({ path, readOnly = false, publication = false, find
       if (input.current) input.current.value = "";
       resource.reload(); if (!uploadOpen) heading.current?.focus();
       return true;
-    } catch (failure) { setError(failure); input.current?.focus(); return false; }
+    } catch (failure) {
+      setError(failure);
+      if (failure.status === 409) {
+        setSelected(null); setReplacing(null); setUploadOpen(false);
+        if (input.current) input.current.value = "";
+        resource.reload(); onConflict?.();
+      } else input.current?.focus();
+      return false;
+    }
     finally { setBusy(false); }
   }
   async function upload(event) {
@@ -135,13 +143,13 @@ export function ImageManager({ path, readOnly = false, publication = false, find
   </Panel>;
 }
 
-export function ReportImages({ report, kind }) {
+export function ReportImages({ report, kind, onConflict }) {
   const readOnly = report.status !== (kind === "finder" ? "PENDING" : "OPEN");
   const [open, setOpen] = useState(false);
   const button = useRef(null);
   return <div className="report-images"><button ref={button} type="button" className="button button-secondary button-small" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>{readOnly ? "View photos" : "Manage photos"} for report #{report.report_id}</button>
     <FormDialog className={"report-images-dialog" + (kind === "finder" ? " finder-report-images-dialog" : "")} open={open} title={"Photos for report #" + report.report_id} closeLabel="Close report photos" returnFocusRef={button} onClose={() => setOpen(false)}>
-      <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} finderReport={kind === "finder"} />
+      <ImageManager path={"my/" + kind + "-reports/" + report.report_id + "/images"} readOnly={readOnly} finderReport={kind === "finder"} onConflict={() => onConflict?.(report.report_id)} />
     </FormDialog>
   </div>;
 }

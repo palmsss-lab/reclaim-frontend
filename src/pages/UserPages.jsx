@@ -13,16 +13,14 @@ import { FormDialog } from "../components/FormDialog";
 import { PublicCategorySelect as CategorySelect } from "../components/PublicCategories";
 import { useState } from "react";
 import { Link } from "react-router";
-import { api, pageInfo } from "../api/client";
+import { api, ApiError, pageInfo } from "../api/client";
+import { manilaDateTime, manilaInputTimestamp, parseApiDate } from "../api/dates";
 import { useAuth } from "../auth/AuthContext";
 import { DataTable, EmptyState, ErrorNotice, Field, LoadingState, PageHeading, Panel, Pager, formatDate, useApiResource } from "../components/ui";
 import "./UserPages.css";
 
-function localDateTime(value) {
-  const date = value ? new Date(value) : new Date();
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-function apiDateTime(value) { return value ? new Date(value).toISOString() : ""; }
+function localDateTime(value) { return manilaDateTime(value ? parseApiDate(value) : new Date()); }
+function apiDateTime(value) { return manilaInputTimestamp(value); }
 export function UserHomePage() {
   const { session } = useAuth();
   const verified = session?.identity?.email_verified === true;
@@ -96,7 +94,7 @@ export function FinderReportsPage() {
     if (!await confirm("Withdraw this pending found-item report?", { confirmLabel: "Withdraw report" })) return;
     setBusyId(reportId); setActionError(null);
     try { await api("my/finder-reports/" + reportId + "/withdraw", { method: "POST", body: {} }); notify("Found-item report withdrawn."); resource.reload(); }
-    catch (error) { setActionError(error); }
+    catch (error) { setActionError(error); if (error.status === 409) resource.reload(); }
     finally { setBusyId(null); }
   }
   return <>
@@ -106,19 +104,19 @@ export function FinderReportsPage() {
     <NotificationTarget kind="finder-reports" />
     <Panel className="user-reports-panel" title="Your found-item reports" description="Only reports submitted by your account are shown here.">
       {resource.loading ? <LoadingState label="Loading found-item reports…" /> : resource.error ? <ErrorNotice error={resource.error} /> : <DataTable mobileCards caption="Your found-item reports" rows={resource.rows} rowKey={(row) => row.report_id} emptyTitle="No found-item reports yet" emptyText="Use Report found item to send your first report." columns={[
-        { key: "images", label: "Images", render: (row) => <ReportImages report={row} kind="finder" /> },
+        { key: "images", label: "Images", render: (row) => <ReportImages report={row} kind="finder" onConflict={resource.reload} /> },
         { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.category_name || "Category not selected"} · Found {formatDate(row.found_at)}</small></> },
         { key: "found_place", label: "Found place" },
         { key: "status", label: "Status", render: (row) => <UserStatus kind="finder" value={row.status} /> },
         { key: "submitted_at", label: "Submitted", render: (row) => formatDate(row.submitted_at) },
-        { key: "actions", label: "Actions", render: (row) => row.status === "PENDING" ? <button className="button button-secondary button-small" type="button" disabled={busyId === row.report_id} onClick={() => withdraw(row.report_id)}>{busyId === row.report_id ? "Withdrawing…" : "Withdraw"}</button> : row.received_item_id ? <span>Item #{row.received_item_id}</span> : "—" },
+        { key: "actions", label: "Actions", render: (row) => row.status === "PENDING" ? <button className="button button-secondary button-small" type="button" disabled={busyId === row.report_id} onClick={() => withdraw(row.report_id)}>{busyId === row.report_id ? "Withdrawing…" : "Withdraw"}</button> : row.received_item_id ? <span>Received item reference #{row.received_item_id}. Item details are available from authorized staff.</span> : "—" },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
     </Panel>
   </>;
 }
 
-function MissingReportForm({ report, onSaved, onPartial }) {
+function MissingReportForm({ report, onSaved, onPartial, onConflict }) {
   const draft = useRecordImage();
   const [values, setValues] = useState({ item_description: report?.item_description || "", last_known_location: report?.last_known_location || "", lost_at: localDateTime(report?.lost_at), category_id: report?.category_id ? String(report.category_id) : "" });
   const [error, setError] = useState(null);
@@ -130,14 +128,14 @@ function MissingReportForm({ report, onSaved, onPartial }) {
       const save = async () => (await api(report ? "my/missing-reports/" + report.report_id : "my/missing-reports", { method: report ? "PATCH" : "POST", body })).data;
       const row = report ? await save() : await draft.save(save, row => "my/missing-reports/" + row.report_id + "/images");
       onSaved(row);
-    } catch (requestError) { setError(requestError); }
+    } catch (requestError) { setError(requestError); if (requestError.status === 409 && report) onConflict?.(report.report_id); }
     finally { setBusy(false); }
   }
   return <>
     <ErrorNotice error={error} focus fields={{ item_description: { id: "missing-description", label: "Item description" }, last_known_location: { id: "last_known_location", label: "Last-known location" }, lost_at: { id: "lost_at", label: "When was it last seen?" }, category_id: { id: "category_id", label: "Category" }, image: { id: "missing-image", label: "Photo" } }} /><form onSubmit={submit} aria-busy={busy || undefined}><fieldset className="record-draft-fields" disabled={busy || Boolean(draft.record)}><div className="form-grid">
       <Field label="Item description" name="missing-description" error={error?.errors?.item_description}><textarea id="missing-description" maxLength="16000" value={values.item_description} onChange={(event) => setValues({ ...values, item_description: event.target.value })} required /></Field>
       <Field label="Last-known location" name="last_known_location" error={error?.errors?.last_known_location}><input id="last_known_location" maxLength="200" value={values.last_known_location} onChange={(event) => setValues({ ...values, last_known_location: event.target.value })} required /></Field>
-      <Field label="When was it last seen?" name="lost_at" error={error?.errors?.lost_at}><input id="lost_at" type="datetime-local" max={localDateTime()} value={values.lost_at} onChange={(event) => setValues({ ...values, lost_at: event.target.value })} required /></Field>
+      <Field label="When was it last seen? (Philippine time)" name="lost_at" error={error?.errors?.lost_at} hint="Enter the date and time in Philippine time (Asia/Manila)."><input id="lost_at" type="datetime-local" max={localDateTime()} value={values.lost_at} onChange={(event) => setValues({ ...values, lost_at: event.target.value })} required /></Field>
       <CategorySelect error={error?.errors?.category_id} value={values.category_id} onChange={(event) => setValues({ ...values, category_id: event.target.value })} />
     </div></fieldset>{!report && <DraftImage onChange={() => setError(null)} draft={draft} id="missing-image" busy={busy} error={error} onViewSaved={onPartial} />}<div className="form-actions"><button className="button button-primary" type="submit" disabled={busy || draft.uncertain}>{busy ? "Saving report…" : draft.record ? "Finish saving report" : report ? "Save changes" : "Submit missing report"}</button></div></form>
   </>;
@@ -162,25 +160,34 @@ export function MissingReportsPage() {
   const [busyId, setBusyId] = useState(null);
   const resource = useApiResource("my-missing-reports-" + status + "-" + pageNumber, () => statusPages("my/missing-reports", { statuses: ["OPEN", "RESOLVED", "WITHDRAWN"], active: status, page: pageNumber }), true);
 
+  async function refreshMissingReport(reportId) {
+    try { const fresh = await api("my/missing-reports/" + reportId); setStatus(fresh.data.status); }
+    catch (error) { setActionError(error); }
+    finally { setPageNumber(1); resource.reload(); }
+  }
+
   async function changeState(report, action) {
     const label = action === "resolve" ? "resolve" : "withdraw";
     if (!await confirm("Do you want to " + label + " this open missing-item report? You won't be able to reopen this report.", { confirmLabel: action === "resolve" ? "Resolve report" : "Withdraw report" })) return;
     setBusyId(report.report_id); setActionError(null);
     try { await api("my/missing-reports/" + report.report_id + "/" + action, { method: "POST", body: {} }); notify(action === "resolve" ? "Missing-item report resolved." : "Missing-item report withdrawn."); setPageNumber(1); resource.reload(); }
-    catch (error) { setActionError(error); }
+    catch (error) {
+      setActionError(error);
+      if (error.status === 409) refreshMissingReport(report.report_id);
+    }
     finally { setBusyId(null); }
   }
 
   return <>
     <PageHeading title="My missing items" description="Report what you lost and where you last saw it. Only you and staff can see these details. Mark your report resolved when you find the item." action={<button className="button button-primary" type="button" onClick={() => { setEditing(null); setShowForm(true); }}>Report missing item</button>} />
-    <FormDialog discardLabel="Discard changes" open={showForm} title={editing ? "Edit missing-item report" : "Report a missing item"} description="Details stay private to you and authorized staff." onClose={() => { setShowForm(false); setEditing(null); resource.reload(); }}><MissingReportForm onPartial={() => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); resource.reload(); }} key={editing?.report_id || "new"} report={editing} onSaved={(row) => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); notify(editing ? "Missing-item report updated." : "Missing-item report submitted.", editing ? undefined : "missing-create-" + row.report_id); resource.reload(); }} /></FormDialog>
+    <FormDialog discardLabel="Discard changes" open={showForm} title={editing ? "Edit missing-item report" : "Report a missing item"} description="Details stay private to you and authorized staff." onClose={() => { setShowForm(false); setEditing(null); resource.reload(); }}><MissingReportForm onConflict={async (id) => { setShowForm(false); setEditing(null); setActionError(new ApiError("This report changed while you were editing. Loading its current status.", 409)); await refreshMissingReport(id); }} onPartial={() => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); resource.reload(); }} key={editing?.report_id || "new"} report={editing} onSaved={(row) => { setShowForm(false); setEditing(null); setStatus("OPEN"); setPageNumber(1); notify(editing ? "Missing-item report updated." : "Missing-item report submitted.", editing ? undefined : "missing-create-" + row.report_id); resource.reload(); }} /></FormDialog>
     <ErrorNotice error={actionError} />
     <NotificationTarget kind="missing-reports" />
     <Panel className="user-reports-panel" title="Your missing-item reports">
       <StatusTabs label="Missing report state" options={[{ value: "OPEN", label: "Still Missing" }, { value: "RESOLVED", label: "Resolved" }, { value: "WITHDRAWN", label: "Withdrawn" }]} value={status} counts={resource.payload?.tabCounts} onChange={value => { setStatus(value); setPageNumber(1); }}>
       <p className="muted-copy">Resolving your report does not return a stored item or change an ownership claim.</p>
       {resource.loading ? <LoadingState label="Loading missing reports…" /> : resource.error ? <ErrorNotice error={resource.error} /> : !resource.rows.length ? <MissingReportsEmptyState status={status} counts={resource.payload?.tabCounts} onSelectStatus={value => { setStatus(value); setPageNumber(1); }} /> : <DataTable mobileCards caption="Your missing-item reports" rows={resource.rows} rowKey={(row) => row.report_id} columns={[
-        { key: "images", label: "Images", render: (row) => <ReportImages report={row} kind="missing" /> },
+        { key: "images", label: "Images", render: (row) => <ReportImages report={row} kind="missing" onConflict={refreshMissingReport} /> },
         { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.category_name || "Category not selected"}</small></> },
         { key: "last_known_location", label: "Last known location" },
         { key: "lost_at", label: "Last seen", render: (row) => formatDate(row.lost_at, { time: true }) },
