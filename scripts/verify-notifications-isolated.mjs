@@ -150,6 +150,8 @@ async function register(account, username) {
 }
 
 try {
+  const source = command(php, [...phpOptions, "-r", "require 'vendor/autoload.php'; echo (new ReflectionClass(App\\Services\\InAppNotifications::class))->getFileName();"]).trim();
+  assert.equal(normalized(source), normalized(join(backend, "app/Services/InAppNotifications.php")), "Refusing an autoloader that resolves application code outside the selected backend");
   for (const port of [3307, 8001, 5174]) assert.equal(await listening(port), false, "Refusing occupied test port " + port);
   command(join(mysqlBin, "mysqld.exe"), ["--no-defaults", "--initialize-insecure", "--basedir=" + resolve(mysqlBin, ".."), "--datadir=" + dataDir]);
   start(join(mysqlBin, "mysqld.exe"), ["--no-defaults", "--basedir=" + resolve(mysqlBin, ".."), "--datadir=" + dataDir, "--bind-address=127.0.0.1", "--port=3307", "--mysqlx=OFF", "--no-monitor"]);

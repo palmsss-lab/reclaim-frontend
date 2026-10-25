@@ -35,6 +35,7 @@ const messages = Object.assign(Object.create(null), {
   "No active public listing exists for this item.": "This item has no active public listing. Refresh the item record.",
   "Only pending finder reports can be withdrawn.": "This report is no longer pending and cannot be withdrawn. Refresh your reports to check its status.",
   "This finder report is no longer pending handover.": "This report is no longer pending handover. Refresh the report before continuing.",
+  "A handover reminder was already sent within the last hour.": "A reminder was sent less than an hour ago. Check the last reminder time and wait one hour between reminders. The report is still awaiting physical handover.",
   "Only pending finder reports can be closed.": "This report is no longer pending and cannot be closed. Refresh it to check its status.",
   "Only open missing-item reports can be edited.": "This report is no longer open and cannot be edited. Refresh your reports to check its status.",
   "Only open missing-item reports can be resolved or withdrawn.": "This report is no longer open. Refresh your reports to check its status before continuing.",

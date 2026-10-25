@@ -13,3 +13,5 @@
 @media(max-width:640px) { .staff-filter-form { grid-template-columns: 1fr; } .staff-filter-form .button { width: 100%; } }
 @media(max-width:640px) { .staff-filter-form > .button { margin-top: 0; } }
 @media(max-width:640px) { .intake-actions > .button { width: 100%; } }
+.finder-handover-reminder { margin-bottom: 16px; }
+.finder-handover-reminder .button { white-space: normal; text-align: left; }

@@ -4,6 +4,7 @@ import StaffStatus, { staffStatusLabel } from "../components/StaffStatus";
 import { manilaDateTime as localDateTime, manilaInputTimestamp as apiDateTime } from "../api/dates";
 import { useSuccessToast } from "../components/Toast";
 import PossibleMatchForm from "../components/PossibleMatchForm";
+import FinderHandoverReminder from "../components/FinderHandoverReminder";
 import { FoundItemFields, WorkflowForm, foundItemTargets } from "../components/WorkflowForm";
 import { useConfirm } from "../components/Confirmation";
 import { DraftImage, useRecordImage } from "../components/DraftImage";
@@ -80,7 +81,7 @@ export function FinderQueuePage() {
         { key: "item_description", label: "Item", render: (row) => <><strong>{row.item_description}</strong><small className="table-subline">{row.reporter_name} · {row.reporter_email}</small></> },
         { key: "found_place", label: "Found place" },
         { key: "found_at", label: "Found", render: (row) => formatDate(row.found_at) },
-        { key: "status", label: "Status", render: (row) => <StaffStatus value={row.status} /> },
+        { key: "status", label: "Status", render: (row) => <><StaffStatus value={row.status} />{row.status === "PENDING" && <small className="table-subline">Not yet received · awaiting physical handover</small>}</> },
         { key: "review", label: "Review", render: (row) => <Link to={"/staff/finder-reports/" + row.report_id} state={{ reviewFrom }}>Open report</Link> },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
@@ -135,6 +136,7 @@ export function FinderReportDetailPage() {
         <section id="handover-actions" tabIndex="-1" aria-label="Physical handover">
         <Panel title="Physical handover" description="Select the official category and where staff places the item.">
           <ErrorNotice error={closureError} focus onDismiss={() => setClosureError(null)} />
+          {report.status === "PENDING" && <FinderHandoverReminder report={report} disabled={busy || resource.loading} onRefresh={resource.reload} onError={setClosureError} />}
           <div className="inline-actions handover-actions">
           {(report.received_item_id || success?.item_id) && <Link className="button button-secondary" to={"/staff/items/" + (report.received_item_id || success.item_id)}>Open received item</Link>}
           <button className="button button-primary" type="button" disabled={busy || resource.loading} aria-disabled={report.status !== "PENDING" || undefined} onClick={() => { if (report.status === "PENDING") setHandoverOpen(true); }}>{report.status === "RECEIVED" ? "Handover recorded" : "Record physical handover"}</button>
