@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router";
-import { SessionCheckNotice, useAuth } from "../auth/AuthContext";
+import { useAuth } from "../auth/AuthContext";
 import Brand from "./Brand";
 import AccountMenu from "./AccountMenu";
 import UserNotifications from "./UserNotifications";
@@ -88,7 +88,7 @@ export function PublicShell() {
   return <div className="public-app-shell">
     <a className="skip-link" href="#main">Skip to content</a>
     <SiteHeader headerRef={headerRef} />
-    <main id="main" className="public-main" key={location.pathname}><SessionCheckNotice /><Outlet /></main>
+    <main id="main" className="public-main" key={location.pathname}><Outlet /></main>
     <Footer />
   </div>;
 }
