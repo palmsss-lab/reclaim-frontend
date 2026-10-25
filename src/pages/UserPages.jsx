@@ -91,7 +91,7 @@ export function FinderReportsPage() {
   const [busyId, setBusyId] = useState(null);
   const resource = useApiResource("my-finder-reports-" + pageNumber, () => api("my/finder-reports", { query: { per_page: 20, page: pageNumber } }));
   async function withdraw(reportId) {
-    if (!await confirm("Withdraw this pending found-item report?", { confirmLabel: "Withdraw report" })) return;
+    if (!await confirm("Withdraw this pending found-item report?", { confirmLabel: "Withdraw report", danger: true })) return;
     setBusyId(reportId); setActionError(null);
     try { await api("my/finder-reports/" + reportId + "/withdraw", { method: "POST", body: {} }); notify("Found-item report withdrawn."); resource.reload(); }
     catch (error) { setActionError(error); if (error.status === 409) resource.reload(); }
@@ -109,7 +109,7 @@ export function FinderReportsPage() {
         { key: "found_place", label: "Found place" },
         { key: "status", label: "Status", render: (row) => <UserStatus kind="finder" value={row.status} /> },
         { key: "submitted_at", label: "Submitted", render: (row) => formatDate(row.submitted_at) },
-        { key: "actions", label: "Actions", render: (row) => row.status === "PENDING" ? <button className="button button-secondary button-small" type="button" disabled={busyId === row.report_id} onClick={() => withdraw(row.report_id)}>{busyId === row.report_id ? "Withdrawing…" : "Withdraw"}</button> : row.received_item_id ? <span>Received item reference #{row.received_item_id}. Item details are available from authorized staff.</span> : "—" },
+        { key: "actions", label: "Actions", render: (row) => row.status === "PENDING" ? <button className="button button-danger-outline button-small" type="button" disabled={busyId === row.report_id} onClick={() => withdraw(row.report_id)}>{busyId === row.report_id ? "Withdrawing…" : "Withdraw"}</button> : row.received_item_id ? <span>Received item reference #{row.received_item_id}. Item details are available from authorized staff.</span> : "—" },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
     </Panel>
@@ -168,7 +168,7 @@ export function MissingReportsPage() {
 
   async function changeState(report, action) {
     const label = action === "resolve" ? "resolve" : "withdraw";
-    if (!await confirm("Do you want to " + label + " this open missing-item report? You won't be able to reopen this report.", { confirmLabel: action === "resolve" ? "Resolve report" : "Withdraw report" })) return;
+    if (!await confirm("Do you want to " + label + " this open missing-item report? You won't be able to reopen this report.", { confirmLabel: action === "resolve" ? "Resolve report" : "Withdraw report", danger: action === "withdraw" })) return;
     setBusyId(report.report_id); setActionError(null);
     try { await api("my/missing-reports/" + report.report_id + "/" + action, { method: "POST", body: {} }); notify(action === "resolve" ? "Missing-item report resolved." : "Missing-item report withdrawn."); setPageNumber(1); resource.reload(); }
     catch (error) {
@@ -192,7 +192,7 @@ export function MissingReportsPage() {
         { key: "last_known_location", label: "Last known location" },
         { key: "lost_at", label: "Last seen", render: (row) => formatDate(row.lost_at, { time: true }) },
         { key: "status", label: "Status", render: (row) => <UserStatus kind="missing" value={row.status} /> },
-        { key: "actions", label: "Actions", render: (row) => row.status === "OPEN" ? <div className="inline-actions"><button type="button" className="button button-secondary button-small" onClick={(event) => { setEditing(row); setShowForm(true); }}>Edit</button><button type="button" className="button button-secondary button-small" disabled={busyId === row.report_id} onClick={() => changeState(row, "resolve")}>Resolve</button><button type="button" className="text-button" disabled={busyId === row.report_id} onClick={() => changeState(row, "withdraw")}>Withdraw</button></div> : "—" },
+        { key: "actions", label: "Actions", render: (row) => row.status === "OPEN" ? <div className="inline-actions"><button type="button" className="button button-secondary button-small" onClick={(event) => { setEditing(row); setShowForm(true); }}>Edit</button><button type="button" className="button button-secondary button-small" disabled={busyId === row.report_id} onClick={() => changeState(row, "resolve")}>Resolve</button><button type="button" className="text-button text-button-danger" disabled={busyId === row.report_id} onClick={() => changeState(row, "withdraw")}>Withdraw</button></div> : "—" },
       ]} />}
       {!resource.loading && !resource.error && <Pager page={resource.page} onPage={setPageNumber} />}
       </StatusTabs>

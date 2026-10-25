@@ -140,7 +140,7 @@ export function ItemDetailPage() {
     if (busyAction || resource.loading || claimsResource.loading) return;
     const claimant = claim.claimant?.full_name || ("claimant #" + claim.claimant_id);
     const message = action === "return"
-      ? "Return item #" + itemId + " to " + claimant + "? This closes its storage assignment, removes the item from public listings, and rejects all other pending claims for this item."
+      ? "Before confirming, verify ownership and complete the physical handover to " + claimant + ". Return item #" + itemId + " to this claimant? This closes its storage assignment, removes the item from public listings, and rejects all other pending claims for this item."
       : "Reject " + claimant + "\u2019s claim for item #" + itemId + "? This decision cannot be undone here.";
     if (!await confirm(message, { confirmLabel: action === "return" ? "Return item" : "Reject claim", danger: action !== "return" })) return;
     const actionName = action === "return" ? "return" : "reject";
@@ -183,7 +183,7 @@ export function ItemDetailPage() {
         { key: "submitted_at", label: "Submitted", render: (claim) => formatDate(claim.submitted_at, { time: true }) },
         { key: "outcome", label: "Outcome", render: (claim) => <StaffStatus value={claim.outcome} /> },
         { key: "reviewer", label: "Reviewed by", render: (claim) => claim.reviewer?.full_name ? claim.reviewer.full_name + " · " + formatDate(claim.reviewed_at) : "—" },
-        { key: "actions", label: "Actions", render: (claim) => claim.outcome === "PENDING" ? <div className="claim-decision"><strong>{claim.claimant?.full_name}</strong><div className="inline-actions"><button className="button button-secondary button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading} onClick={() => reviewClaim(claim, "reject")}>Reject</button><button className="button button-primary button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading || item.is_returned} onClick={() => reviewClaim(claim, "return")}>Return item</button></div></div> : "—" },
+        { key: "actions", label: "Actions", render: (claim) => claim.outcome === "PENDING" ? <div className="claim-decision"><strong>{claim.claimant?.full_name}</strong><div className="inline-actions"><button className="button button-danger-outline button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading} onClick={() => reviewClaim(claim, "reject")}>Reject</button><button className="button button-primary button-small" type="button" disabled={Boolean(busyAction) || claimsResource.loading || resource.loading || item.is_returned} onClick={() => reviewClaim(claim, "return")}>Return item</button></div></div> : "—" },
       ]} />
       <Pager label="Claim pagination" page={claimsResource.page} onPage={page => changeDetailPage("claims_page", page)} />
       </>}

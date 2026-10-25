@@ -59,6 +59,10 @@ button:disabled { cursor: not-allowed; opacity: .6; }
 .button-secondary:hover:not(:disabled) { border-color: var(--teal); background: var(--surface-muted); }
 .button-danger { color: white; background: var(--danger); }
 .button-danger:hover:not(:disabled) { background: #812532; }
+.button-danger-outline { color: var(--danger); background: var(--surface); border-color: var(--danger); }
+.button-danger-outline:hover:not(:disabled) { background: var(--danger-surface); }
+.text-button.text-button-danger { color: var(--danger); }
+.text-button.text-button-danger:hover:not(:disabled) { background: var(--danger-surface); }
 .button-small { min-height: 44px; padding: 8px 12px; font-size: 14px; }
 .button-soft { color: var(--teal-dark); background: var(--teal-soft); border-color: #b6d5ce; }
 .button-soft:hover { background: #d5e9e4; border-color: var(--teal); }

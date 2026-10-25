@@ -8,17 +8,29 @@ import { ErrorNotice, Field, LoadingState, Panel, useApiResource } from "./ui";
 import "./Images.css";
 
 export function ImagePreview({ path, version = "", alt = "Item photograph" }) {
-  const [state, setState] = useState({ url: "", error: false });
+  const [state, setState] = useState({ url: "", ready: false, error: "" });
+  const [revision, setRevision] = useState(0);
+  const root = useRef(null);
   useEffect(() => {
     let active = true, url;
     const controller = new AbortController();
-    setState({ url: "", error: false });
+    setState({ url: "", ready: false, error: "" });
     api(path, { responseType: "blob", signal: controller.signal }).then(blob => {
-      if (active) { url = URL.createObjectURL(blob); setState({ url, error: false }); }
-    }).catch(error => { if (active && error.name !== "AbortError") setState({ url: "", error: true }); });
+      if (active) { url = URL.createObjectURL(blob); setState({ url, ready: false, error: "" }); }
+    }).catch(error => {
+      if (!active || error.name === "AbortError") return;
+      const message = error.status === 404 ? "This image could not be found. Retry loading it."
+        : error.status === 403 ? "You no longer have permission to view this image."
+        : error.status === 401 ? "Sign in again to view this private image."
+        : "We couldn't load this image. Check your connection and retry.";
+      setState({ url: "", ready: false, error: message });
+    });
     return () => { active = false; controller.abort(); if (url) URL.revokeObjectURL(url); };
-  }, [path, version]);
-  return state.url ? <img className="item-photograph" src={state.url} alt={alt} /> : <span role="status">{state.error ? "Image unavailable" : "Loading image..."}</span>;
+  }, [path, version, revision]);
+  return <div className="image-preview" ref={root} tabIndex="-1" aria-label={alt} aria-busy={!state.ready && !state.error}>
+    {state.url && <img className="item-photograph" src={state.url} alt={alt} hidden={!state.ready || Boolean(state.error)} onLoad={() => setState(value => ({ ...value, ready: true }))} onError={() => setState(value => ({ ...value, ready: false, error: "This image could not be displayed. Retry loading it." }))} />}
+    {state.error ? <div className="image-preview-error"><p role="alert">{state.error}</p><button className="button button-secondary button-small" type="button" onClick={() => { root.current?.focus({ preventScroll: true }); setRevision(value => value + 1); }}>Retry image</button></div> : !state.ready && <LoadingState label="Loading image..." />}
+  </div>;
 }
 
 export function PublicImages({ item, firstOnly = false, fallback }) {
@@ -45,7 +57,7 @@ function ImageMoreActions({ index, triggerId, busy, onReplace, onRemove }) {
     <summary ref={trigger} data-upload-trigger={triggerId} aria-label={"More actions for image " + index} aria-disabled={busy || undefined} onClick={event => { if (busy) event.preventDefault(); }}>More actions</summary>
     <div className="image-more-options">
       <button className="text-button" type="button" disabled={busy} onClick={() => choose(onReplace)}>Replace image {index}</button>
-      <button className="text-button" type="button" disabled={busy} onClick={() => choose(onRemove)}>Remove image {index}</button>
+      <button className="text-button text-button-danger" type="button" disabled={busy} onClick={() => choose(onRemove)}>Remove image {index}</button>
     </div>
   </details>;
 }
@@ -107,7 +119,7 @@ export function ImageManager({ path, readOnly = false, publication = false, find
   function findUploadTrigger() { return document.querySelector('[data-upload-trigger="' + uploadTriggerId.current + '"]'); }
   async function removeImage(imageId) {
     if (busy) return;
-    if (await confirm("Permanently remove this image?", { confirmLabel: publication || path.startsWith("my/") ? "Remove photo" : "Confirm", danger: publication })) mutate(() => api(path + "/" + imageId, { method: "DELETE" }), "Image removed.");
+    if (await confirm("Permanently remove this image?", { confirmLabel: "Remove photo", danger: true })) mutate(() => api(path + "/" + imageId, { method: "DELETE" }), "Image removed.");
   }
   const attachButton = !readOnly && <button className="button button-primary" type="button" data-upload-trigger={inputId + "-add"} aria-disabled={busy || resource.rows.length >= 5 || resource.loading || Boolean(resource.error) || undefined} onClick={(event) => { if (!busy && resource.rows.length < 5 && !resource.loading && !resource.error) openUpload(event.currentTarget); }}>Attach image</button>;
   return <Panel className={"images-panel" + (publication ? " staff-item-images" : "") + (finderReport ? " finder-report-images" : "")} title="Images" action={publication || finderReport ? attachButton : undefined}>
@@ -124,13 +136,13 @@ export function ImageManager({ path, readOnly = false, publication = false, find
         {publication && <button className="button button-secondary button-small" type="button" disabled={busy} onClick={async () => { if (!image.approved && !await confirm("Approve this photo for public display? Confirm it contains no private evidence or contact details.", { confirmLabel: "Approve photo" })) return; mutate(() => api(path + "/" + image.image_id + "/publication", { method: "PUT", body: { approved: !image.approved } }), image.approved ? "Public approval removed." : "Image approved. It is public only while the item listing is available."); }}>{image.approved ? "Make image " + (index + 1) + " private" : "Approve image " + (index + 1) + " for public display"}</button>}
         {publication ? <ImageMoreActions index={index + 1} triggerId={inputId + "-" + image.image_id} busy={busy} onReplace={trigger => openUpload(trigger, image.image_id)} onRemove={() => removeImage(image.image_id)} /> : <>
           <button className="button button-secondary button-small" type="button" data-upload-trigger={inputId + "-" + image.image_id} aria-disabled={busy || undefined} onClick={event => { if (!busy) openUpload(event.currentTarget, image.image_id); }}>Replace image {index + 1}</button>
-          <button className="text-button" type="button" disabled={busy} onClick={() => removeImage(image.image_id)}>Remove image {index + 1}</button>
+          <button className="text-button text-button-danger" type="button" disabled={busy} onClick={() => removeImage(image.image_id)}>Remove image {index + 1}</button>
         </>}
       </div>}
     </figure>)}</div>}
     {!resource.loading && !resource.error && !resource.rows.length && <p className="muted-copy">No images attached.</p>}
     {!readOnly && <>{!publication && !finderReport && attachButton}
-    <FormDialog discardLabel={publication || path.startsWith("my/") ? "Discard changes" : "Confirm"} open={uploadOpen} title={replacing ? "Replace image" : "Attach image"} returnFocusRef={uploadTrigger} returnFocus={findUploadTrigger} onClose={closeUpload}><form onSubmit={upload} aria-busy={busy}>
+    <FormDialog discardLabel="Discard changes" open={uploadOpen} title={replacing ? "Replace image" : "Attach image"} returnFocusRef={uploadTrigger} returnFocus={findUploadTrigger} onClose={closeUpload}><form onSubmit={upload} aria-busy={busy}>
       <ErrorNotice error={error} fields={{ image: { id: inputId, label: "Image" } }} />
       <Field label={replacing ? "Replacement image" : "Attach image"} name={inputId} error={error?.errors?.image} hint="JPEG, PNG or WebP. Up to 5 MiB, 4096 pixels per side, 8 million pixels; maximum 5 images. Images are saved as JPEG without metadata.">
         <input ref={input} id={inputId} type="file" accept="image/jpeg,image/png,image/webp" disabled={busy || (!replacing && resource.rows.length >= 5) || resource.loading || Boolean(resource.error)} onChange={event => { setSelected(event.target.files?.[0] || null); setError(null); }} />

@@ -43,7 +43,11 @@ async (page) => {
     if (path === 'items' || path === 'public/items') return rows([item, { ...item, item_id: 202, public_description: 'Fictional umbrella with a wooden handle' }]);
     if (path === 'items/201' || path === 'public/items/201') return respond({ data: item });
     if (path === 'items/201/storage-history') return rows([{ item_id: 201, assignment_no: 1, location, assigned_by: { full_name: 'Fictional Staff' }, assigned_at: date, removed_at: null }]);
-    if (path === 'items/201/claims' || path === 'reports/pending-claims') return rows([claim]);
+    if (path === 'items/201/claims' || path === 'reports/pending-claims') return rows([{ ...claim, has_proof_image: Boolean(state.proofImage) }]);
+    if (path === 'items/201/claims/101/proof-image') {
+      if (state.imageStatus) return respond({}, state.imageStatus);
+      return route.fulfill({ contentType: 'image/png', body: Buffer.from(state.brokenImage ? 'not an image' : 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', state.brokenImage ? 'utf8' : 'base64') });
+    }
     if (path === 'reports/return-rates') return rows([{ ...category, received_items: 5, returned_items: 2, return_rate_percent: 40 }]);
     if (path === 'reports/storage-occupancy') return rows([{ ...location, current_item_count: 3, average_holding_days: 2.5 }]);
     if (path === 'reports/monthly-intake') return rows([{ month: '2026-10', monthly_intake: 5, running_total: 9 }]);
@@ -126,6 +130,45 @@ async (page) => {
     const bell = page.getByRole('dialog', { name: 'Notifications', exact: true });
     await bell.getByText(/Staff have not received/).waitFor(); await measure('notification-dialog', width);
     await page.keyboard.press('Escape'); await bell.waitFor({ state: 'hidden' });
+    for (const [role, path, label] of [['user', '/my/finder-reports', 'Withdraw'], ['user', '/my/missing-reports', 'Withdraw'], ['staff', '/staff/finder-reports/101', 'Close report'], ['staff', '/staff/items/201', 'Reject']]) {
+      await visit(role, path);
+      const action = page.getByRole('button', { name: label, exact: true });
+      assert.equal(await action.evaluate(el => getComputedStyle(el).color === getComputedStyle(document.documentElement).getPropertyValue('--danger').trim() || el.matches('.button-danger-outline, .text-button-danger')), true, label + ' has a quiet destructive treatment');
+      await action.click(); const confirmation = page.locator('.confirmation-dialog[open]'); await confirmation.waitFor();
+      assert.equal(await confirmation.locator('.button-danger').count(), 1, label + ' confirmation is destructive');
+      await measure('confirmation-' + label.toLowerCase().replaceAll(' ', '-'), width);
+      assert.equal(await confirmation.getByRole('button', { name: 'Cancel', exact: true }).evaluate(el => el === document.activeElement), true, 'Consequential actions focus Cancel first');
+      await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+      await page.waitForFunction(() => !document.querySelector('.confirmation-dialog[open]'));
+      await page.waitForFunction(() => document.activeElement?.textContent.trim() === 'Withdraw' || document.activeElement?.textContent.trim() === 'Close report' || document.activeElement?.textContent.trim() === 'Reject');
+      assert.equal(await action.evaluate(el => el === document.activeElement), true, 'Cancelled action restores focus');
+    }
+    await visit('staff', '/staff/items/201'); await page.getByRole('button', { name: 'Return item', exact: true }).click();
+    const returnDialog = page.locator('.confirmation-dialog[open]');
+    await returnDialog.getByText(/verify ownership and complete the physical handover/i).waitFor();
+    await returnDialog.getByText(/closes its storage assignment, removes the item from public listings, and rejects all other pending claims/).waitFor();
+    await returnDialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+    await visit('user', '/my/finder-reports'); await page.getByRole('button', { name: 'Manage photos for report #101', exact: true }).click();
+    await page.getByRole('button', { name: 'Remove image 1', exact: true }).click();
+    const removal = page.locator('.confirmation-dialog[open]');
+    assert.equal(await removal.getByRole('button', { name: 'Remove photo', exact: true }).evaluate(el => el.classList.contains('button-danger')), true, 'Photo removal is explicit and destructive');
+    await removal.getByRole('button', { name: 'Cancel', exact: true }).click(); await page.keyboard.press('Escape');
+    state.proofImage = true;
+    for (const [status, text] of [[503, 'connection'], [403, 'permission'], [404, 'found']]) {
+      state.imageStatus = status; await visit('staff', '/staff/items/201');
+      await page.getByRole('button', { name: 'View claim evidence', exact: true }).click();
+      const retry = page.getByRole('button', { name: 'Retry image', exact: true }); await retry.waitFor();
+      assert.equal((await page.locator('.image-preview-error').innerText()).includes(text), true, 'Photo errors explain recovery');
+      state.imageStatus = null; await retry.click();
+      const image = page.getByAltText('Private ownership proof from Fictional Walk-in Visitor', { exact: true }); await image.waitFor({ state: 'visible' });
+      assert.equal(await image.evaluate(el => el.complete && el.naturalWidth > 0), true, 'Retry displays the returned image');
+      assert.equal(await image.evaluate(el => el.closest('.image-preview') === document.activeElement), true, 'Retry keeps keyboard focus on the image context');
+      await page.keyboard.press('Escape');
+    }
+    state.brokenImage = true; await visit('staff', '/staff/items/201'); await page.getByRole('button', { name: 'View claim evidence', exact: true }).click();
+    await page.getByRole('button', { name: 'Retry image', exact: true }).waitFor();
+    assert.equal(await page.locator('.image-preview img:visible').count(), 0, 'An undecodable image never appears loaded');
+    await page.keyboard.press('Escape'); state.brokenImage = false; state.proofImage = false;
     for (const [role, path, label, name] of [
       ['user', '/items/201', 'Submit ownership claim', 'claim-form'],
       ['staff', '/staff/items/new', 'Start staff intake', 'intake-form'],
