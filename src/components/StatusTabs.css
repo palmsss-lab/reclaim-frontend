@@ -1,6 +1,6 @@
 .status-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-block: 0 1rem; border-bottom: 1px solid var(--line); padding-bottom: .65rem; }
-.status-tabs button { font: inherit; font-weight: 600; padding: .7rem 1rem; border: 1px solid var(--line); min-height: 48px; border-radius: var(--radius-control); color: var(--ink); background: var(--surface); cursor: pointer; }
-.status-tabs button[aria-selected=true] { color: var(--teal-dark); background: var(--teal-soft); border-color: var(--teal); }
+.status-tabs button { font: inherit; font-weight: 600; padding: .7rem 1rem; border: 0; border-bottom: 2px solid transparent; min-height: 48px; border-radius: 0; color: var(--muted); background: transparent; cursor: pointer; }
+.status-tabs button[aria-selected=true] { color: var(--teal-dark); border-bottom-color: var(--teal); }
 .status-tab-count { display: inline-block; margin-left: .45rem; font-variant-numeric: tabular-nums; }
 .status-tabs button:focus-visible, [role=tabpanel]:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 @media(max-width: 500px) { .status-tabs button { flex: 1 1 auto; padding-inline: .7rem; } }

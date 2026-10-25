@@ -3,3 +3,4 @@
 .confirmation-dialog h2 { margin-bottom: 16px; }
 .confirmation-dialog p { overflow-wrap: anywhere; }
 .dialog-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+@media (max-width:480px) { .dialog-actions { display: grid; grid-template-columns: minmax(0,1fr); } .dialog-actions .button { width: 100%; } }

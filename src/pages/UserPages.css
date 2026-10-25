@@ -22,7 +22,7 @@
 .profile-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 24px; align-items: start; }
 @media (max-width:900px) { .user-dashboard-grid, .profile-grid { grid-template-columns: 1fr; } }
 @media (max-width:650px) { .user-stats { grid-template-columns: 1fr 1fr; } .user-dashboard-grid { gap: 16px; } }
-@media (max-width:480px) { .user-stats, .profile-grid { grid-template-columns: 1fr; } .user-activity-row { flex-wrap: wrap; } }
+@media (max-width:480px) { .user-stats { grid-template-columns: repeat(2,minmax(0,1fr)); } .profile-grid { grid-template-columns: 1fr; } .user-activity-row { flex-wrap: wrap; } }
 
 .user-activity-row > .user-status { flex: 0 1 45%; min-width: 0; }
 .activity-group + .activity-group { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line); }

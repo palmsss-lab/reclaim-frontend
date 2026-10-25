@@ -47,7 +47,8 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
     if (!open) return;
     const media = gsap.matchMedia();
     media.add("(prefers-reduced-motion: no-preference)", () => {
-      gsap.fromTo(dialogRef.current, { y: 6 }, { y: 0, duration: .16, ease: "power2.out", clearProps: "transform" });
+      const drawer = dialogRef.current.classList.contains("mobile-navigation-dialog");
+      gsap.fromTo(dialogRef.current, drawer ? { x: 16 } : { y: 6 }, { x: 0, y: 0, duration: .16, ease: "power2.out", clearProps: "transform" });
     });
     return () => media.revert();
   }, [open]);

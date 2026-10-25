@@ -31,7 +31,7 @@ function MobileNavigation({ staff }) {
   const label = staff ? "Staff navigation" : "Main navigation";
   useEffect(() => { setOpen(false); }, [location.pathname, location.search, location.hash]);
   useEffect(() => {
-    const mobile = window.matchMedia(staff ? "(max-width: 1024px)" : "(max-width: 760px)");
+    const mobile = window.matchMedia(staff ? "(max-width: 1024px)" : "(max-width: 1100px)");
     const resized = event => { if (!event.matches) setOpen(false); };
     mobile.addEventListener("change", resized);
     return () => mobile.removeEventListener("change", resized);

@@ -131,7 +131,6 @@ export function FinderReportDetailPage() {
     {resource.loading && !report ? <LoadingState label="Loading finder report…" /> : resource.error ? <ErrorNotice error={resource.error} /> : report && <>
       <p><a href="#handover-actions" onClick={event => { event.preventDefault(); document.getElementById("handover-actions")?.focus(); }}>Go to handover actions</a></p>
       <div className="staff-detail-grid">
-        <ImageManager path={"staff/finder-reports/" + reportId + "/images"} readOnly />
         <Panel title="Reported item"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Found place</dt><dd>{report.found_place}</dd></div><div><dt>Found at</dt><dd>{formatDate(report.found_at, { time: true })}</dd></div><div><dt>Submitted</dt><dd>{formatDate(report.submitted_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Contact details</dt><dd>{report.reporter_contact}</dd></div><div><dt>Status</dt><dd><StaffStatus value={report.status} /></dd></div></dl></Panel>
         <section id="handover-actions" tabIndex="-1" aria-label="Physical handover">
         <Panel title="Physical handover" description="Select the official category and where staff places the item.">
@@ -151,6 +150,7 @@ export function FinderReportDetailPage() {
           {report.status !== "PENDING" && <p className="muted-copy">{report.status === "CLOSED" ? "This report was closed without recording item handover." : report.status === "RECEIVED" ? "Staff has recorded receipt and initial storage placement." : "The reporter withdrew this report."} Further handover changes are not available.</p>}
         </Panel>
         </section>
+        <ImageManager path={"staff/finder-reports/" + reportId + "/images"} readOnly />
       </div>
     </>}
   </>;
@@ -197,11 +197,11 @@ export function MissingReportDetailPage() {
     <PageHeading eyebrow="MISSING REPORT REVIEW" title={report ? "Report #" + report.report_id : "Missing report"} description="Review records staff identity and time. It does not resolve the user's report or change found items." action={<Link className="button button-secondary" to={back.to}>{back.label}</Link>} />
     {resource.loading ? <LoadingState label="Loading missing report…" /> : resource.error ? <ErrorNotice error={resource.error} /> : report && <>
       <ErrorNotice error={actionError} />
-      <ImageManager path={"staff/missing-reports/" + reportId + "/images"} readOnly />
       <Panel title="Private report details"><dl className="detail-list"><div><dt>Description</dt><dd>{report.item_description}</dd></div><div><dt>Category</dt><dd>{report.category_name || "Not selected"}</dd></div><div><dt>Last-known location</dt><dd>{report.last_known_location}</dd></div><div><dt>Last seen</dt><dd>{formatDate(report.lost_at, { time: true })}</dd></div><div><dt>Reporter</dt><dd>{report.reporter_name}</dd></div><div><dt>Reporter contact</dt><dd>{report.reporter_contact}</dd></div><div><dt>Reporter email</dt><dd>{report.reporter_email}</dd></div><div><dt>Status</dt><dd><StaffStatus value={report.status} /></dd></div><div><dt>Previously reviewed</dt><dd>{report.reviewer_name ? report.reviewer_name + " · " + formatDate(report.reviewed_at, { time: true }) : "No"}</dd></div></dl>
         {!report.reviewed_at && report.status !== "WITHDRAWN" && <div className="form-actions"><button className="button button-primary" type="button" disabled={busy} onClick={review}>{busy ? "Recording review…" : "Record review"}</button></div>}
         {report.status === "OPEN" && <div className="form-actions"><PossibleMatchForm reportId={report.report_id} onSent={resource.reload} /></div>}
       </Panel>
+      <ImageManager path={"staff/missing-reports/" + reportId + "/images"} readOnly />
     </>}
   </>;
 }

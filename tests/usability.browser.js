@@ -126,9 +126,7 @@ async page => {
         check(await page.locator(".staff-sidebar").isHidden(), "Tablet navigation releases space for staff tasks");
         await page.locator(".inventory-panel .table-scroll").focus();
         await page.keyboard.press("ArrowRight");
-        await page.waitForFunction(() => document.querySelector(".inventory-panel .table-scroll").scrollLeft > 0);
-        check(true, "The inventory table scrolls by keyboard");
-        await page.locator(".inventory-panel .table-scroll").evaluate(el => { el.scrollLeft = 0; });
+        check(await page.locator(".inventory-panel .table-scroll").evaluate(el => el.scrollWidth <= el.clientWidth), "Tablet inventory uses readable record cards without horizontal scrolling");
       }
       if (role === "user" && width === 1440) check(await page.locator(".notification-bell svg").evaluate(el => el.getBoundingClientRect().width >= 22), "Desktop bell stays visible");
       if ([320, 768, 1440].includes(width)) await page.screenshot({ path: ".playwright-cli/usability-" + name + "-" + width + ".png", fullPage: true });
