@@ -18,6 +18,7 @@ import "./styles.css";
 import { ConfirmationProvider } from "./components/Confirmation";
 import SetPasswordPage from "./pages/SetPasswordPage";
 import { afterSignIn, authPath } from "./auth/returnPath";
+import RouteFocus from "./navigation/RouteFocus";
 
 function RouteGate({ roles, admin = false, verified = false }) {
   const GateContainer = roles.includes("user") ? "section" : "main";
@@ -44,7 +45,7 @@ function RouteGate({ roles, admin = false, verified = false }) {
     return () => { active = false; };
   }, [admin, session?.role, location.pathname, probe, setAdminAccess]);
 
-  if (checkingSession || sessionError) return <GateContainer id={roles.includes("user") ? undefined : "main"} className="gate-state"><h1>Confirm your session to continue</h1>{!roles.includes("user") && <SessionCheckNotice />}<Link to="/">Browse found items</Link></GateContainer>;
+  if (checkingSession || sessionError) return <GateContainer id={roles.includes("user") ? undefined : "main"} className="gate-state"><h1>Confirm your session to continue</h1><SessionCheckNotice /><Link to="/">Browse found items</Link></GateContainer>;
   if (!session) return <Navigate to="/login" replace />;
   if (!roles.includes(session.role)) return <Navigate to={afterSignIn(session)} replace />;
   if (verified && session.role === "user" && session.identity?.email_verified !== true) return <Navigate to={authPath("/verify-email", location.pathname + location.search)} replace />;
@@ -77,12 +78,10 @@ function AppRoutes() {
       : path === "/register" ? "Create account"
       : ({ "/profile": "Profile", "/change-password": "Change password", "/verify-email": "Verify email", "/forgot-password": "Password recovery", "/reset-password": "Reset password" }[path] || "Browse items");
     document.title = label + " · Reclaim";
-    const main = document.getElementById("main");
-    if (main) { main.setAttribute("tabindex", "-1"); main.focus({ preventScroll: true }); }
   }, [location.pathname]);
 
   return (
-    <Routes>
+    <><RouteFocus /><Routes>
       <Route element={<PublicShell />}>
         <Route path="/" element={<PublicBrowsePage />} />
         <Route path="/items/:itemId" element={<PublicItemPage />} />
@@ -128,7 +127,7 @@ function AppRoutes() {
         </Route>
       </Route>
 
-    </Routes>
+    </Routes></>
   );
 }
 

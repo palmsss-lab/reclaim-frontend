@@ -8,9 +8,19 @@ import react from "@vitejs/plugin-react";
 const server = await createServer({ configFile: false, envDir: false, plugins: [react()], optimizeDeps: { noDiscovery: true, include: [] }, server: { middlewareMode: true, hmr: false, watch: null, ws: false } });
 after(() => server.close());
 const { DashboardContent, DashboardStat } = await server.ssrLoadModule("/src/components/Dashboard.jsx");
-const { DataTable } = await server.ssrLoadModule("/src/components/ui.jsx");
+const { DataTable, formatDate } = await server.ssrLoadModule("/src/components/ui.jsx");
 const render = (Component, props, child) => renderToStaticMarkup(createElement(Component, props, child));
 const resource = { loading: false, error: null, page: { total: 7 }, reload() {} };
+
+test("review dates without an offset use the API's Philippine timezone on every device", () => {
+  const original = process.env.TZ;
+  try {
+    for (const zone of ["UTC", "America/Los_Angeles", "Asia/Manila"]) {
+      process.env.TZ = zone;
+      assert.equal(formatDate("2026-10-25 00:30:00", { time: true }), formatDate("2026-10-25T00:30:00+08:00", { time: true }), zone);
+    }
+  } finally { if (original === undefined) delete process.env.TZ; else process.env.TZ = original; }
+});
 
 test("responsive record cells group fragments into one value and preserve semantic headers", () => {
   const html = render(DataTable, { caption: "Own reports", rows: [{ id: 1 }], columns: [{ key: "item", label: "Reported item", render: () => [createElement("strong", { key: "title" }, "Backpack"), createElement("small", { key: "detail" }, "Private report")] }] });

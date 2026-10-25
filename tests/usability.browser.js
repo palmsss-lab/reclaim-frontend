@@ -55,8 +55,8 @@ async page => {
 
   state.fail.add("me");
   await visit("guest", "/");
-  await page.getByRole("button", { name: "Retry session check", exact: true }).waitFor();
   await page.getByRole("heading", { name: "Available listings", exact: true }).waitFor();
+  check(await page.getByRole("button", { name: "Retry session check", exact: true }).count() === 0, "Public browsing preserves the newer decision to keep session warnings on protected workflows");
   check(await page.locator(".public-item-card").count() === 2, "Public browsing survives a session-check failure");
   const beforePrivate = reads.length;
   await visit("user", "/my");

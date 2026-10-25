@@ -2,6 +2,7 @@ import { Children, cloneElement, isValidElement, useCallback, useEffect, useMemo
 import { apiRows, pageInfo } from "../api/client";
 import "./ui.css";
 import { fieldLabel, readableMessage } from "./validation";
+import { parseApiDate } from "../api/dates";
 
 export function useApiResource(key, load, retainOnReload = false) {
   const [revision, setRevision] = useState(0);
@@ -71,7 +72,7 @@ export function Pager({ page, onPage, label = "Pagination" }) {
 
 export function formatDate(value, options = {}) {
   if (!value) return "—";
-  const date = new Date(value);
+  const date = parseApiDate(value);
   if (Number.isNaN(date.valueOf())) return String(value);
   return new Intl.DateTimeFormat("en-PH", { dateStyle: options.dateStyle || "medium", ...(options.time ? { timeStyle: "short" } : {}), timeZone: "Asia/Manila" }).format(date);
 }

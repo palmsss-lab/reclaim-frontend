@@ -8,6 +8,7 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
   const dialogRef = useRef(null);
   const titleId = useId();
   const triggerRef = useRef(null);
+  const openedRoute = useRef(null);
   const dirtyRef = useRef(false);
   const openedRef = useRef(false);
   const focusTimerRef = useRef(null);
@@ -21,6 +22,7 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
     if (open && dialog && !dialog.open) {
       window.clearTimeout(focusTimerRef.current);
       triggerRef.current = returnFocusRef?.current || document.activeElement;
+      openedRoute.current = { url: window.location.href, key: history.state?.key };
       dirtyRef.current = false;
       dialog.showModal();
       openedRef.current = true;
@@ -33,6 +35,7 @@ export function FormDialog({ open, title, description, onClose, returnFocusRef, 
       if (openedRef.current) {
         openedRef.current = false;
         focusTimerRef.current = window.setTimeout(() => {
+          if (openedRoute.current?.url !== window.location.href || openedRoute.current?.key !== history.state?.key) return;
           const fallback = returnFocusRefLatest.current?.();
           const target = triggerRef.current?.isConnected ? triggerRef.current : fallback;
           if (target?.isConnected && !target.disabled) target.focus({ preventScroll: true });

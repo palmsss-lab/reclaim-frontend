@@ -1,0 +1,6 @@
+.notification-target { margin-bottom: 24px; border-radius: var(--radius); scroll-margin-top: calc(var(--public-header-height, 76px) + 16px); }
+.notification-target:focus { outline: 3px solid var(--focus); outline-offset: 4px; }
+.notification-target .panel-heading { align-items: flex-start; }
+.notification-target .panel-heading > .text-button { flex: 0 0 auto; }
+.notification-target .muted-copy { margin-bottom: 0; }
+@media (max-width:480px) { .notification-target .panel-heading { flex-direction: column; gap: 8px; } .notification-target .text-button { padding-left: 0; } }
