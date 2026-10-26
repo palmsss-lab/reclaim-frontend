@@ -15,11 +15,11 @@ test("explicit claim sign-in preserves a safe item while normal login uses role 
   assert.equal(afterSignIn({ role: "user", identity: { email_verified: false } }, "/my"), "/my");
   assert.equal(afterSignIn({ role: "staff" }, null), "/staff");
   assert.equal(afterSignIn({ role: "user", identity: { email_verified: true } }, null), "/my");
-  assert.equal(afterSignIn({ role: "staff", isAccountAdmin: true }, null), "/admin/accounts");
+  assert.equal(afterSignIn({ role: "staff", isAccountAdmin: true }, null), "/staff");
   for (const destination of ["/my/claims", "/profile", "/staff/claims?page=3", "/admin/accounts/2"]) {
     assert.equal(afterSignIn({ role: "user", identity: { email_verified: true } }, destination), "/my");
     assert.equal(afterSignIn({ role: "staff" }, destination), "/staff");
-    assert.equal(afterSignIn({ role: "staff", isAccountAdmin: true }, destination), "/admin/accounts");
+    assert.equal(afterSignIn({ role: "staff", isAccountAdmin: true }, destination), "/staff");
   }
   assert.equal(afterSignIn({ role: "staff" }, "/items/42"), "/staff");
 

@@ -27,5 +27,5 @@ export function afterSignIn(session, destination) {
   if (session.role === "user" && item) {
     return session.identity?.email_verified === true ? safe : authPath("/verify-email", safe);
   }
-  return session.role === "staff" ? (session.isAccountAdmin ? "/admin/accounts" : "/staff") : "/my";
+  return session.role === "staff" ? "/staff" : "/my";
 }
