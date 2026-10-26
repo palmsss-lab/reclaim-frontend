@@ -22,7 +22,7 @@ export default function StaffPeoplePage() {
   return <>
     <PageHeading eyebrow="REFERENCE DATA" title="People" description="Correct walk-in names and contact details without replacing their identity or historical records. Account holders manage their own profiles." />
     <Panel title="People directory">
-      <form className="staff-filter-form" onSubmit={event => { event.preventDefault(); setQuery(search); setPage(1); }}><Field label="Search people" name="people-search"><input id="people-search" type="search" value={search} onChange={event => setSearch(event.target.value)} /></Field><button className="button button-secondary" type="submit">Search</button></form>
+      <form className="staff-search-form" onSubmit={event => { event.preventDefault(); setQuery(search); setPage(1); }}><Field label="Search people" name="people-search"><input id="people-search" type="search" value={search} onChange={event => setSearch(event.target.value)} /></Field><button className="button button-secondary" type="submit">Search</button></form>
       {people.loading ? <LoadingState label="Loading people…" /> : people.error ? <ErrorNotice error={people.error} /> : <DataTable caption="People directory" rows={people.rows} rowKey={row => row.person_id} emptyTitle="No people found" emptyText="Try another search. New walk-in people can be added during staff intake." columns={[
         { key: "full_name", label: "Name" }, { key: "contact_details", label: "Contact details" },
         { key: "profile", label: "Profile", render: row => row.is_account_holder === false ? "Walk-in person" : "Account profile — owner-managed" },

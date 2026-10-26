@@ -34,7 +34,7 @@ function MatchSelection({ reportId, onSent }) {
     finally { setBusy(false); }
   }
   return <>
-    <form onSubmit={event => { event.preventDefault(); setQuery(search); setPage(1); setItemId(""); }}>
+    <form className="staff-search-form" onSubmit={event => { event.preventDefault(); setQuery(search); setPage(1); setItemId(""); }}>
       <Field name="possible-match-search" label="Search published items"><input id="possible-match-search" type="search" maxLength="200" value={search} disabled={busy} onChange={event => setSearch(event.target.value)} /></Field>
       <button className="button button-secondary" type="submit" disabled={busy}>Search items</button>
     </form>

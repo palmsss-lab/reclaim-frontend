@@ -1,6 +1,8 @@
 .staff-dashboard-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 24px; align-items: start; }
 .staff-filter-form { display: grid; grid-template-columns: minmax(230px,1fr) minmax(170px,.45fr) auto; gap: 16px; align-items: start; margin-bottom: 18px; }
 .staff-filter-form > .button { margin-top: calc(14px * 1.6 + 6px); }
+.staff-search-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 16px; margin-bottom: 24px; }
+.staff-search-form > .button { min-height: 48px; }
 .staff-detail-grid { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(300px,.85fr); grid-template-areas: "record actions" "photos actions"; gap: 24px; align-items: start; }
 .staff-detail-grid > .panel:not(.images-panel) { grid-area: record; }
 .staff-detail-grid > .images-panel { grid-area: photos; margin: 0; }
@@ -15,6 +17,7 @@
 @media(max-width:1050px) { .staff-dashboard-grid, .staff-detail-grid { grid-template-columns: 1fr; } .staff-detail-grid { grid-template-areas: "record" "actions" "photos"; } }
 @media(max-width:640px) { .staff-filter-form { grid-template-columns: 1fr; } .staff-filter-form .button { width: 100%; } }
 @media(max-width:640px) { .staff-filter-form > .button { margin-top: 0; } }
+@media(max-width:640px) { .staff-search-form { grid-template-columns: minmax(0, 1fr); } .staff-search-form > .button, .handover-actions > .button { width: 100%; } }
 @media(max-width:640px) { .intake-actions > .button { width: 100%; } }
 .finder-handover-reminder { margin-bottom: 16px; }
 .finder-handover-reminder .button { white-space: normal; text-align: left; }
